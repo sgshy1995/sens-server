@@ -30,6 +30,9 @@ import {UserModule} from './app/user/user.module';
 import {StatusFilter} from './common/errors.filter';
 import {AuthModule} from './auth/auth.module';
 import {UserController} from './app/user/user.controller';
+import {UserInfoModule} from "./app/user_info/user.info.module";
+import {SysNotificationModule} from "./app/sys_notification/sys.notification.module";
+import {NotificationModule} from "./app/notification/notification.module";
 
 @Module({
   imports: [
@@ -50,7 +53,10 @@ import {UserController} from './app/user/user.controller';
     }),
     // modules
     UserModule,
-    AuthModule
+    AuthModule,
+    UserInfoModule,
+    SysNotificationModule,
+    NotificationModule
   ],
   controllers: [AppController, UserController],
   providers: [
@@ -70,7 +76,9 @@ export class AppModule {
     consumer
       .apply(PathMiddleware)
       .forRoutes(
-        {path: 'user/upload', method: RequestMethod.POST}
+        {path: 'user/upload_avatar', method: RequestMethod.POST},
+        {path: 'user/upload_background', method: RequestMethod.POST},
+        {path: 'user_info/upload/data', method: RequestMethod.POST}
       );
   }
 }

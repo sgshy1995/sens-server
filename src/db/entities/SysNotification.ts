@@ -6,6 +6,9 @@ export class SysNotification {
   @PrimaryGeneratedColumn("uuid", { comment: "通知id" })
   id: string;
 
+  @Column("int", { comment: "是否预置" })
+  preset: number;
+
   @Column("varchar", { comment: "通知标题" })
   title: string;
 
@@ -19,8 +22,8 @@ export class SysNotification {
   status: number;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at?: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at?: Date;
 }

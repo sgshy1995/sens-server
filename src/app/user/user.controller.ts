@@ -43,11 +43,11 @@ export class UserController {
 
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard('jwt')) // 使用 'JWT' 进行验证
-  @Post('upload')
+  @Post('upload_avatar')
   @UseInterceptors(FileInterceptor('file', {
     storage: multer.diskStorage({
       destination: (req, file, cb) => {
-        cb(null, path.join(process.env.UPLOAD_PATH, `/users/${moment(new Date(), 'YYYY-MM-DD').format('YYYY-MM-DD')}`));
+        cb(null, path.join(process.env.UPLOAD_PATH, `/users/avatar/${moment(new Date(), 'YYYY-MM-DD').format('YYYY-MM-DD')}`));
       },
       filename: (req, file, cb) => {
         // 自定义文件名
@@ -56,7 +56,7 @@ export class UserController {
       },
     }),
   }))
-  async uploadFile(@UploadedFile() file, @Res({passthrough: true}) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
+  async uploadAvatarFile(@UploadedFile() file, @Res({passthrough: true}) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
     console.log(file);
     console.log(request.user);
     // @ts-ignore
@@ -69,29 +69,54 @@ export class UserController {
     return res;
   }
 
+  @UseGuards(new TokenGuard()) // 使用 token redis 验证
+  @UseGuards(AuthGuard('jwt')) // 使用 'JWT' 进行验证
+  @Post('upload_background')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, path.join(process.env.UPLOAD_PATH, `/users/background/${moment(new Date(), 'YYYY-MM-DD').format('YYYY-MM-DD')}`));
+      },
+      filename: (req, file, cb) => {
+        // 自定义文件名
+        const filename = `${nuid.next()}.${file.mimetype.split('/')[1]}`;
+        return cb(null, filename);
+      },
+    }),
+  }))
+  async uploadBackgroundFile(@UploadedFile() file, @Res({passthrough: true}) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
+    console.log(file);
+    console.log(request.user);
+    // @ts-ignore
+    await this.UserService.updateUser(request.user.id, {background: file.path.split(path.sep).join('/')});
+    const res = {
+      code: HttpStatus.OK,
+      message: '上传成功'
+    };
+    response.status(res.code);
+    return res;
+  }
+
   @Post('login')
-  async login(@Body() loginInfo: {user: User, option: { capture: string, device_id: string, login_type: string }}, @Res({passthrough: true}) response: Response): Promise<Response | void | Record<string, any>> {
+  async login(@Body() loginInfo: { device_id: string, phone: string, capture_phone: string }, @Res({passthrough: true}) response: Response): Promise<Response | void | Record<string, any>> {
     console.log('JWT验证 - Step 1: 用户请求登录');
-    // 校验验证码
-    const validateCaptureResult = await this.authService.validateCapture(loginInfo.option.device_id, loginInfo.option.capture);
+    const validateCaptureResult = await this.authService.validateCapturePhone(loginInfo.device_id, loginInfo.phone, loginInfo.capture_phone);
     if (validateCaptureResult) {
       response.status(validateCaptureResult.code);
       return validateCaptureResult;
     }
 
-    const authResult = loginInfo.option.login_type === 'username' ?
-      await this.authService.validateUserByUsername(loginInfo.user.username, loginInfo.user.password) :
-      await this.authService.validateUserByPhone(loginInfo.user.phone, loginInfo.user.password)
+    const authResult = await this.authService.validateUserByPhone(loginInfo.phone)
 
     switch (authResult.code) {
       case 1:
-        const resRight = await this.authService.certificate(authResult.user, loginInfo.option.login_type);
+        const resRight = await this.authService.certificate(authResult.user);
         response.status(resRight.code);
         return resRight;
       default:
         const resDefault = {
           code: HttpStatus.BAD_REQUEST,
-          message: loginInfo.option.login_type === 'username' ? '账号或密码不正确' : '邮箱或密码不正确',
+          message: '账号或密码不正确',
         };
         response.status(resDefault.code);
         return resDefault;
@@ -103,33 +128,6 @@ export class UserController {
   @Post('logout')
   async logout(@Body() User: User, @Res({passthrough: true}) response: Response): Promise<Response | void | Record<string, any>> {
     const res = await this.authService.dropJwt(User);
-    response.status(res.code);
-    return res;
-  }
-
-  @Post()
-  async createUser(@Body() loginInfo: {user: User, option: { capture: string, device_id: string, capture_phone: string }}, @Res({passthrough: true}) response: Response): Promise<Response | void | Record<string, any>> {
-    const bodyCopy = Object.assign({}, loginInfo.user);
-
-    // 校验验证码
-    const validateCaptureResult = await this.authService.validateCapture(loginInfo.option.device_id, loginInfo.option.capture);
-    if (validateCaptureResult) {
-      response.status(validateCaptureResult.code);
-      return validateCaptureResult;
-    }
-
-    // 校验邮箱验证码
-    const validateCaptureEmailResult = await this.authService.validateCapturePhone(loginInfo.option.device_id, loginInfo.user.phone, loginInfo.option.capture_phone);
-    if (validateCaptureEmailResult) {
-      response.status(validateCaptureEmailResult.code);
-      return validateCaptureEmailResult;
-    }
-
-    const res = await this.UserService.createUser(loginInfo.user);
-    if (res.code === HttpStatus.CREATED) {
-      const authResult = await this.authService.validateUserByUsername(bodyCopy.username, bodyCopy.password);
-      res.data = (await this.authService.certificate(authResult.user, 'username')).data;
-    }
     response.status(res.code);
     return res;
   }
@@ -170,9 +168,26 @@ export class UserController {
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard('jwt')) // 使用 'JWT' 进行验证
   @Put(':id')
-  async updateUser(@Param('id') id: string, @Body() User: User, @Res({passthrough: true}) response: Response): Promise<ResponseResult> {
-    const res = await this.UserService.updateUser(id, User);
+  async updateUser(@Param('id') id: string, @Body() body: {user: User, device_id?: string, phone_capture?: string}, @Res({passthrough: true}) response: Response): Promise<ResponseResult> {
+    const userUpdate = await this.UserService.findOneById(id)
+    const {user, phone_capture, device_id} = body
+    if (user.hasOwnProperty('phone')){
+      userUpdate.phone = user.phone
+      const validateCaptureResult = await this.authService.validateNewCapturePhone(device_id, userUpdate.phone, userUpdate.username, phone_capture);
+      if (validateCaptureResult) {
+        response.status(validateCaptureResult.code);
+        return validateCaptureResult;
+      }
+    } else if (user.hasOwnProperty('name')){
+      userUpdate.name = user.name
+    } else if (user.hasOwnProperty('gender')){
+      userUpdate.gender = user.gender
+    } else if (user.hasOwnProperty('background')){
+      userUpdate.background = user.background
+    }
+    const res = await this.UserService.updateUser(id, userUpdate);
     response.status(res.code);
     return res;
   }
+
 }

@@ -13,9 +13,9 @@ export class PathMiddleware implements NestMiddleware {
         fs.mkdirSync(dir_path,{recursive:true});
       }
     }
-    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/users/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
-    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/infos/background/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
-    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/infos/avatar/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
+    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/users/avatar/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
+    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/users/background/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
+    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/user_infos/data/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
     next();
   }
 }

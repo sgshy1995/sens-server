@@ -16,7 +16,7 @@ export class TokenGuard implements CanActivate {
 
         // 获取 redis 里缓存的 token
         const redis = await RedisInstance.initRedis('TokenGuard.canActivate', RedisConfig().db);
-        const key = `${user.id}-${user.username}`;
+        const key = `TOKEN-${user.username}`;
         const cache = await redis.get(key);
 
         if (token !== cache) {

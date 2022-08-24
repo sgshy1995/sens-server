@@ -27,15 +27,15 @@ export class UserInfo {
   @Column("varchar", { comment: "出院小结", nullable: true })
   discharge_abstract?: string;
 
-  @Column("varchar", { comment: "影像资料", nullable: true })
+  @Column("text", { comment: "影像资料", nullable: true })
   image_data?: string;
 
   @Column("int", { comment: "信息状态" })
   status: number;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at?: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at?: Date;
 }

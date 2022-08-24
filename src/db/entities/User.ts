@@ -10,27 +10,24 @@ export class User {
   username: string;
 
   @Column("varchar", { comment: "用户姓名" })
-  name: string;
+  name?: string;
 
   @Column("varchar", { comment: "用户头像", nullable: true })
   avatar?: string;
 
-  @Column("varchar", { comment: "用户密码" })
-  password: string;
+  @Column("varchar", { comment: "用户背景", nullable: true })
+  background?: string;
 
-  @Column("varchar", { comment: "盐" })
-  salt: string;
-
-  @Column("int", { comment: "用户性别" })
-  gender: number;
+  @Column("int", { comment: "用户性别 1 男 0 女" })
+  gender?: number;
 
   @Column("varchar", { comment: "用户手机号" })
   phone: string;
 
-  @Column("int", { comment: "用户身份" })
+  @Column("int", { comment: "用户身份 1 医师 0 患者" })
   identity: number;
 
-  @Column("int", { comment: "用户认证" })
+  @Column("int", { comment: "用户认证 1 通过认证 0 未通过认证" })
   authenticate: number;
 
   @Column("varchar", { comment: "用户微信唯一标识", nullable: true })
@@ -42,12 +39,12 @@ export class User {
   @Column("timestamp", { comment: "最近登录时间", nullable: true })
   recent_login_time?: Date;
 
-  @Column("int", { comment: "用户状态" })
+  @Column("int", { comment: "用户状态 1 正常 0 冻结" })
   status: number;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at?: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at?: Date;
 }

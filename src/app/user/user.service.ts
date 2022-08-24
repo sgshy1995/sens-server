@@ -1,15 +1,26 @@
-import {HttpStatus, Injectable} from '@nestjs/common';
+import {HttpStatus, Injectable, forwardRef, Inject} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {FindOptionsSelect, FindOptionsWhere, getRepository, Repository} from 'typeorm';
 import {User} from '../../db/entities/User';
 import {ResponseResult} from '../../types/result.interface';
-import {isEmail, isMobile, isNickname, isPassword, isUsername} from '../../utils/validate';
-import {encryptPassword, makeSalt} from '../../utils/cryptogram';
+import {isMobile} from '../../utils/validate';
+import {UserInfoService} from "../user_info/user.info.service";
+import {NotificationService} from "../notification/notification.service";
+import {SysNotificationService} from "../sys_notification/sys.notification.service";
+import { Notification } from "../../db/entities/Notification";
+import { UserInfo } from "../../db/entities/UserInfo";
+import stringRandom from "string-random";
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,  // 使用泛型注入对应类型的存储库实例
+    @Inject(forwardRef(() => UserInfoService))
+    private readonly userInfoService: UserInfoService,
+    @Inject(forwardRef(() => NotificationService))
+    private readonly notificationService: NotificationService,
+    @Inject(forwardRef(() => SysNotificationService))
+    private readonly sysNotificationService: SysNotificationService
   ) {
   }
 
@@ -24,42 +35,14 @@ export class UserService {
      */
     let responseBody = {code: HttpStatus.OK, message: '创建成功'};
 
-    // 是否有重复的用户名
-    const userInfoExistUsername = await this.userRepo.findOne({
-      where: {
-        username: user.username
-      }
-    });
-    if (userInfoExistUsername) {
-      responseBody.code = HttpStatus.CONFLICT;
-      responseBody.message = '用户名已存在';
-      return responseBody;
-    }
-
-    // 手机号
-    const userInfoExistEmail = await this.userRepo.findOne({
-      where: {
-        phone: user.phone
-      }
-    });
-    if (!isMobile(user.phone)){
-      responseBody.code = HttpStatus.BAD_REQUEST;
-      responseBody.message = '请输入正确格式的手机号';
-      return responseBody;
-    }
-    if (userInfoExistEmail) {
-      responseBody.code = HttpStatus.CONFLICT;
-      responseBody.message = '手机号已注册';
-      return responseBody;
-    }
-
-    // 处理密码
-    const salt = makeSalt(); // 制作密码盐
-    user.password = encryptPassword(user.password, salt);  // 加密密码
-    user.salt = salt;
+    // 处理用户名
+    user.username = stringRandom(16, { letters: 'abcdefghijklmnopqrstuvwxyz' })
     // 插入数据时，删除 id，以避免请求体内传入 id
     user.id !== null && user.id !== undefined && delete user.id;
-    // 初始化 user
+    // 用户身份
+    user.identity = 0
+    // 用户认证
+    user.authenticate = 0
     // status
     user.status = 1;
 
@@ -67,6 +50,31 @@ export class UserService {
     responseBody.message = '注册成功';
 
     await this.userRepo.save(user);
+
+    // 插入新的 user_info 记录
+    const userInfoFind = await this.userInfoService.findOneByUserId(user.id)
+    if (!userInfoFind){
+      const userInfo = new UserInfo()
+      userInfo.user_id = user.id
+      userInfo.integral = 0
+      userInfo.balance = '0'
+      userInfo.status = 1
+      await this.userInfoService.createInfo(userInfo)
+    }
+
+    // 为用户插入默认的系统消息
+    const sysNotifications = await this.sysNotificationService.findManyByPreset()
+    const notifications:Notification[] = sysNotifications.map(item=>{
+      const notification = new Notification()
+      notification.user_id = user.id
+      notification.notification_type = 1
+      notification.sys_notification_id = item.id
+      notification.publish_time = new Date()
+      notification.status = 1
+      notification.read = 0
+      return notification
+    })
+    await this.notificationService.createNotifications(notifications)
 
     return responseBody;
   }
@@ -102,25 +110,6 @@ export class UserService {
     }
     // 更新数据时，删除 id，以避免请求体内传入 id
     user.id !== null && user.id !== undefined && delete user.id;
-    // 校验 phone
-    if (user.hasOwnProperty('phone')){
-      if (!user.phone){
-        responseBody.code = HttpStatus.BAD_REQUEST;
-        responseBody.message = '手机号不能为空';
-        return responseBody;
-      }
-      if (!isMobile(user.phone)){
-        responseBody.code = HttpStatus.BAD_REQUEST;
-        responseBody.message = '请输入正确格式的手机号';
-        return responseBody;
-      }
-      const userPhoneExist =  await this.findOneByAny({phone: user.phone});
-      if (user.phone && userPhoneExist){
-        responseBody.code = HttpStatus.CONFLICT;
-        responseBody.message = '手机号已被注册';
-        return responseBody;
-      }
-    }
     userFind = Object.assign(userFind, user)
     await this.userRepo.update(id, userFind);
     return responseBody;
@@ -150,6 +139,7 @@ export class UserService {
       wx_nickname: true,
       wx_unionid: true,
       avatar: true,
+      background: true,
       phone: true,
       id: true,
       gender: true,
@@ -183,6 +173,7 @@ export class UserService {
       wx_nickname: true,
       wx_unionid: true,
       avatar: true,
+      background: true,
       phone: true,
       id: true,
       gender: true,

@@ -24,12 +24,15 @@ export class Notification {
   @Column("timestamp", { comment: "发布时间" })
   publish_time: Date;
 
+  @Column("int", { comment: "阅读状态 0 未读 1 已读" })
+  read: number;
+
   @Column("int", { comment: "通知状态" })
   status: number;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at?: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at?: Date;
 }
