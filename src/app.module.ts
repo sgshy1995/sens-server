@@ -33,6 +33,9 @@ import {UserController} from './app/user/user.controller';
 import {UserInfoModule} from "./app/user_info/user.info.module";
 import {SysNotificationModule} from "./app/sys_notification/sys.notification.module";
 import {NotificationModule} from "./app/notification/notification.module";
+import {PainQuestionModule} from "./app/pain_question/pain.question.module";
+import {PainReplyModule} from "./app/pain_reply/pain.reply.module";
+import {PainCommentModule} from "./app/pain_comment/pain.comment.module";
 
 @Module({
   imports: [
@@ -56,7 +59,10 @@ import {NotificationModule} from "./app/notification/notification.module";
     AuthModule,
     UserInfoModule,
     SysNotificationModule,
-    NotificationModule
+    NotificationModule,
+    PainQuestionModule,
+    PainReplyModule,
+    PainCommentModule
   ],
   controllers: [AppController, UserController],
   providers: [
@@ -78,7 +84,9 @@ export class AppModule {
       .forRoutes(
         {path: 'user/upload_avatar', method: RequestMethod.POST},
         {path: 'user/upload_background', method: RequestMethod.POST},
-        {path: 'user_info/upload/data', method: RequestMethod.POST}
+        {path: 'user_info/upload/data', method: RequestMethod.POST},
+        {path: 'pain_question/upload/data', method: RequestMethod.POST},
+        {path: 'pain_reply/upload/data', method: RequestMethod.POST}
       );
   }
 }

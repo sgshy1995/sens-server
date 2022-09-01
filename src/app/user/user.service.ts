@@ -7,6 +7,8 @@ import {isMobile} from '../../utils/validate';
 import {UserInfoService} from "../user_info/user.info.service";
 import {NotificationService} from "../notification/notification.service";
 import {SysNotificationService} from "../sys_notification/sys.notification.service";
+import {PainQuestionService} from "../pain_question/pain.question.service";
+import {PainReplyService} from "../pain_reply/pain.reply.service";
 import { Notification } from "../../db/entities/Notification";
 import { UserInfo } from "../../db/entities/UserInfo";
 import stringRandom from "string-random";
@@ -20,7 +22,11 @@ export class UserService {
     @Inject(forwardRef(() => NotificationService))
     private readonly notificationService: NotificationService,
     @Inject(forwardRef(() => SysNotificationService))
-    private readonly sysNotificationService: SysNotificationService
+    private readonly sysNotificationService: SysNotificationService,
+    @Inject(forwardRef(() => PainQuestionService))
+    private readonly painQuestionService: PainQuestionService,
+    @Inject(forwardRef(() => PainReplyService))
+    private readonly painReplyService: PainReplyService
   ) {
   }
 
