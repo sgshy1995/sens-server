@@ -108,6 +108,7 @@ export class AuthService {
         }
         if (!errMsg){
             await redis.setex(`phone~${device_id}~${phone}`, 300, captcha.text);
+            await redis.setex(`phone~simulation~${phone}`, 300, captcha.text);
         }else{
             responseBody.code = HttpStatus.BAD_REQUEST
             responseBody.message = '短信服务器错误'
@@ -235,6 +236,32 @@ export class AuthService {
         } else {
             await redis.del(`phone~${username}~${device_id}~${phone}`);
             return undefined;
+        }
+    }
+
+    // capture_phone 模拟验证
+    async validateSimulationCapturePhone(phone: string): Promise<ResponseResult | undefined> {
+        console.log('phone', phone)
+        // 实例化 redis
+        const redis = await RedisInstance.initRedis('auth.capture.phone', 0);
+        const cache = await redis.get(`phone~simulation~${phone}`);
+        console.log('cache', cache)
+        if (!phone){
+            return {
+                code: HttpStatus.BAD_REQUEST,
+                message: '短信参数错误'
+            };
+        }else if (!cache) {
+            return {
+                code: HttpStatus.NOT_FOUND,
+                message: '短信验证码不存在'
+            };
+        } else {
+            return {
+                code: HttpStatus.OK,
+                message: '查询成功',
+                data: cache
+            };
         }
     }
 

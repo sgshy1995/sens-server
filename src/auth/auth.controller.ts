@@ -29,6 +29,14 @@ export class AuthController {
         return res;
     }
 
+    @Get('simulation/capture_phone')
+    async getSimulationCapturePhone(@Query() query: {phone: string}, @Res({passthrough: true}) response: Response): Promise<Response | void | Record<string, any>> {
+        console.log('query', query)
+        const res = await this.authService.validateSimulationCapturePhone(query.phone);
+        response.status(res.code);
+        return res;
+    }
+
     @Get('capture_phone')
     async getCapturePhoneRegister(@Query() device_id_info: {device_id: string, phone: string, capture: string, if_re_send?: boolean}, @Res({passthrough: true}) response: Response): Promise<Response | void | Record<string, any>> {
         console.log('device_id_info', device_id_info)
