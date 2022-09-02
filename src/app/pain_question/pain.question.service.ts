@@ -305,6 +305,7 @@ export class PainQuestionService {
       .having('pain_question.description LIKE :description', { description: `%${keyword}%` })
       .orHaving('pain_question.pain_type LIKE :pain_type', { pain_type: `%${keyword}%` })
       .select()
+      .orderBy("pain_question.updated_at", "DESC")
       .getMany();
   }
 
