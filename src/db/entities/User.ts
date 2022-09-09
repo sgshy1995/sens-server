@@ -39,6 +39,9 @@ export class User {
   @Column("timestamp", { comment: "最近登录时间", nullable: true })
   recent_login_time?: Date;
 
+  @Column("int", { comment: "是否为admin权限 1 是 0 否" })
+  is_admin: number;
+
   @Column("int", { comment: "用户状态 1 正常 0 冻结" })
   status: number;
 

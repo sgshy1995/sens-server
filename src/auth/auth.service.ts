@@ -58,6 +58,52 @@ export class AuthService {
         }
     }
 
+    // 生成 admin capture 并记录到redis中
+    async generateAdminCapture(visitor_id: string): Promise<String | ResponseResult> {
+        // 实例化 redis
+        if (!visitor_id){
+            return {
+                code: HttpStatus.BAD_REQUEST,
+                message: '参数错误'
+            }
+        }
+        const redis = await RedisInstance.initRedis('auth.capture', 0);
+        const captcha = svgCaptcha.create({
+            size: 6,
+            ignoreChars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            color: false,
+            fontSize: 60,
+            noise: 2
+        });
+        await redis.setex(`admin~${visitor_id}`, 300, captcha.text);
+        return `data:image/svg+xml;base64,${Buffer.from(captcha.data).toString('base64')}`;
+    }
+
+    // capture 验证
+    async validateAdminCapture(visitor_id: string, capture: string): Promise<ResponseResult | undefined> {
+        // 实例化 redis
+        const redis = await RedisInstance.initRedis('auth.capture', 0);
+        const cache = await redis.get(`admin~${visitor_id}`);
+        if (!visitor_id || !capture){
+            return {
+                code: HttpStatus.BAD_REQUEST,
+                message: '参数错误'
+            };
+        }else if (!cache) {
+            return {
+                code: HttpStatus.NOT_FOUND,
+                message: '验证码不存在'
+            };
+        } else if (cache.toLowerCase() !== capture.toLowerCase()) {
+            return {
+                code: HttpStatus.BAD_REQUEST,
+                message: '验证码错误'
+            };
+        } else {
+            return undefined;
+        }
+    }
+
     // 生成 phone 并记录到redis中
     async generateCapturePhone(device_id: string, phone: string, capture: string, if_re_send: boolean): Promise<ResponseResult> {
         const responseBody = {
@@ -109,6 +155,69 @@ export class AuthService {
         if (!errMsg){
             await redis.setex(`phone~${device_id}~${phone}`, 300, captcha.text);
             await redis.setex(`phone~simulation~${phone}`, 300, captcha.text);
+        }else{
+            responseBody.code = HttpStatus.BAD_REQUEST
+            responseBody.message = '短信服务器错误'
+        }
+        return responseBody;
+    }
+
+    // 生成 admin phone code 并记录到redis中
+    async generateAdminCapturePhone(visitor_id: string, phone: string, capture: string, if_re_send: boolean): Promise<ResponseResult> {
+        const responseBody = {
+            code: HttpStatus.CREATED,
+            message: '已发送'
+        }
+        // 实例化 redis
+        if (!visitor_id || !phone || !capture){
+            return {
+                code: HttpStatus.BAD_REQUEST,
+                message: '参数错误'
+            }
+        }
+        const user = await this.usersService.findOneByPhone(phone)
+        if (!user || !user.is_admin){
+            return {
+                code: HttpStatus.NOT_FOUND,
+                message: '用户不存在或权限不足'
+            };
+        }
+        // 验证普通验证码
+        if (!if_re_send){
+            const validateCaptureResult = await this.validateAdminCapture(visitor_id, capture)
+            if (validateCaptureResult) return validateCaptureResult
+        }
+        const redis = await RedisInstance.initRedis('auth.capture.phone', 0);
+        const cache = await redis.get(`admin~phone~${visitor_id}~${phone}`);
+        if (cache) {
+            return {
+                code: HttpStatus.CONFLICT,
+                message: '验证码仍在有效期'
+            };
+        }
+        const captcha = svgCaptcha.create({
+            size: 6,
+            ignoreChars: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            color: false,
+            fontSize: 60,
+            noise: 2
+        });
+        let errMsg = ''
+        function sendPhoneCapture(code: string) {
+            return new Promise((resolve, reject) => {
+                setTimeout(()=>{
+                    resolve(code)
+                },1000)
+            })
+        }
+        try {
+            await sendPhoneCapture(captcha.text)
+        }catch (e) {
+            errMsg = e
+        }
+        if (!errMsg){
+            await redis.setex(`admin~phone~${visitor_id}~${phone}`, 300, captcha.text);
+            await redis.setex(`admin~phone~simulation~${visitor_id}~${phone}`, 300, captcha.text);
         }else{
             responseBody.code = HttpStatus.BAD_REQUEST
             responseBody.message = '短信服务器错误'
@@ -239,12 +348,67 @@ export class AuthService {
         }
     }
 
+    // admin capture_phone 验证
+    async validateAdminCapturePhone(visitor_id: string, phone: string, capture_phone: string): Promise<ResponseResult | undefined> {
+        console.log('visitor_id', visitor_id)
+        console.log('phone', phone)
+        console.log('capture_phone', capture_phone)
+        // 实例化 redis
+        const redis = await RedisInstance.initRedis('auth.capture.phone', 0);
+        const cache = await redis.get(`admin~phone~${visitor_id}~${phone}`);
+        console.log('cache', cache)
+        if (!visitor_id || !phone || !capture_phone){
+            return {
+                code: HttpStatus.BAD_REQUEST,
+                message: '短信参数错误'
+            };
+        }else if (!cache) {
+            return {
+                code: HttpStatus.NOT_FOUND,
+                message: '短信验证码无效'
+            };
+        } else if (cache.toLowerCase() !== capture_phone.toLowerCase()) {
+            return {
+                code: HttpStatus.BAD_REQUEST,
+                message: '短信验证码错误'
+            };
+        } else {
+            await redis.del(`admin~phone~${visitor_id}~${phone}`);
+            return undefined;
+        }
+    }
+
     // capture_phone 模拟验证
     async validateSimulationCapturePhone(phone: string): Promise<ResponseResult | undefined> {
         console.log('phone', phone)
         // 实例化 redis
         const redis = await RedisInstance.initRedis('auth.capture.phone', 0);
         const cache = await redis.get(`phone~simulation~${phone}`);
+        console.log('cache', cache)
+        if (!phone){
+            return {
+                code: HttpStatus.BAD_REQUEST,
+                message: '短信参数错误'
+            };
+        }else if (!cache) {
+            return {
+                code: HttpStatus.NOT_FOUND,
+                message: '短信验证码不存在'
+            };
+        } else {
+            return {
+                code: HttpStatus.OK,
+                message: '查询成功',
+                data: cache
+            };
+        }
+    }
+
+    // admin capture_phone 模拟验证
+    async validateAdminSimulationCapturePhone(visitor_id: string, phone: string): Promise<ResponseResult | undefined> {
+        // 实例化 redis
+        const redis = await RedisInstance.initRedis('auth.capture.phone', 0);
+        const cache = await redis.get(`admin~phone~simulation~${visitor_id}~${phone}`);
         console.log('cache', cache)
         if (!phone){
             return {
@@ -279,6 +443,22 @@ export class AuthService {
             code: 1,
             user
         };
+    }
+
+    // JWT验证 - Step 2: 校验用户信息-手机号-admin
+    async validateAdminUserByPhone(phone: string): Promise<{ code: number, user: User | null }> {
+        let user = await this.usersService.findOneByPhone(phone);
+        const result = {
+            code: 1,
+            user
+        }
+        console.log('JWT验证 - Step 2: 校验用户信息 -- 手机号登录', user);
+        if (!user) {
+            result.code = -1
+        }else if(!user.is_admin){
+            result.code = 0
+        }
+        return result;
     }
 
     // JWT验证 - Step 3: 处理 jwt 签证

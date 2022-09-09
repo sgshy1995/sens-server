@@ -1,14 +1,15 @@
-import {HttpStatus, Injectable, forwardRef, Inject} from '@nestjs/common';
-import {InjectRepository} from '@nestjs/typeorm';
-import {FindOptionsSelect, FindOptionsWhere, getRepository, Repository} from 'typeorm';
-import {User} from '../../db/entities/User';
-import {ResponseResult} from '../../types/result.interface';
-import {isMobile} from '../../utils/validate';
-import {UserInfoService} from "../user_info/user.info.service";
-import {NotificationService} from "../notification/notification.service";
-import {SysNotificationService} from "../sys_notification/sys.notification.service";
-import {PainQuestionService} from "../pain_question/pain.question.service";
-import {PainReplyService} from "../pain_reply/pain.reply.service";
+import { HttpStatus, Injectable, forwardRef, Inject } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { FindOptionsSelect, FindOptionsWhere, getRepository, Repository } from "typeorm";
+import { User } from "../../db/entities/User";
+import { ResponseResult } from "../../types/result.interface";
+import { isMobile } from "../../utils/validate";
+import { UserInfoService } from "../user_info/user.info.service";
+import { NotificationService } from "../notification/notification.service";
+import { SysNotificationService } from "../sys_notification/sys.notification.service";
+import { PainQuestionService } from "../pain_question/pain.question.service";
+import { PainReplyService } from "../pain_reply/pain.reply.service";
+import { PrescriptionService } from "../prescription/prescription.service";
 import { Notification } from "../../db/entities/Notification";
 import { UserInfo } from "../../db/entities/UserInfo";
 import stringRandom from "string-random";
@@ -26,7 +27,9 @@ export class UserService {
     @Inject(forwardRef(() => PainQuestionService))
     private readonly painQuestionService: PainQuestionService,
     @Inject(forwardRef(() => PainReplyService))
-    private readonly painReplyService: PainReplyService
+    private readonly painReplyService: PainReplyService,
+    @Inject(forwardRef(() => PrescriptionService))
+    private readonly prescriptionService: PrescriptionService
   ) {
   }
 
@@ -39,48 +42,50 @@ export class UserService {
     /**
      * 创建新的实体实例，并将此对象的所有实体属性复制到新实体中。 请注意，它仅复制实体模型中存在的属性。
      */
-    let responseBody = {code: HttpStatus.OK, message: '创建成功'};
+    let responseBody = { code: HttpStatus.OK, message: "创建成功" };
 
     // 处理用户名
-    user.username = stringRandom(16, { letters: 'abcdefghijklmnopqrstuvwxyz' })
+    user.username = stringRandom(16, { letters: "abcdefghijklmnopqrstuvwxyz" });
     // 插入数据时，删除 id，以避免请求体内传入 id
     user.id !== null && user.id !== undefined && delete user.id;
     // 用户身份
-    user.identity = 0
+    user.identity = 0;
     // 用户认证
-    user.authenticate = 0
+    user.authenticate = 0;
+    // 用户默认的admin权限关闭
+    user.is_admin = 0;
     // status
     user.status = 1;
 
     responseBody.code = HttpStatus.CREATED;
-    responseBody.message = '注册成功';
+    responseBody.message = "注册成功";
 
     await this.userRepo.save(user);
 
     // 插入新的 user_info 记录
-    const userInfoFind = await this.userInfoService.findOneByUserId(user.id)
-    if (!userInfoFind){
-      const userInfo = new UserInfo()
-      userInfo.user_id = user.id
-      userInfo.integral = 0
-      userInfo.balance = '0'
-      userInfo.status = 1
-      await this.userInfoService.createInfo(userInfo)
+    const userInfoFind = await this.userInfoService.findOneByUserId(user.id);
+    if (!userInfoFind) {
+      const userInfo = new UserInfo();
+      userInfo.user_id = user.id;
+      userInfo.integral = 0;
+      userInfo.balance = "0";
+      userInfo.status = 1;
+      await this.userInfoService.createInfo(userInfo);
     }
 
     // 为用户插入默认的系统消息
-    const sysNotifications = await this.sysNotificationService.findManyByPreset()
-    const notifications:Notification[] = sysNotifications.map(item=>{
-      const notification = new Notification()
-      notification.user_id = user.id
-      notification.notification_type = 1
-      notification.sys_notification_id = item.id
-      notification.publish_time = new Date()
-      notification.status = 1
-      notification.read = 0
-      return notification
-    })
-    await this.notificationService.createNotifications(notifications)
+    const sysNotifications = await this.sysNotificationService.findManyByPreset();
+    const notifications: Notification[] = sysNotifications.map(item => {
+      const notification = new Notification();
+      notification.user_id = user.id;
+      notification.notification_type = 1;
+      notification.sys_notification_id = item.id;
+      notification.publish_time = new Date();
+      notification.status = 1;
+      notification.read = 0;
+      return notification;
+    });
+    await this.notificationService.createNotifications(notifications);
 
     return responseBody;
   }
@@ -102,21 +107,21 @@ export class UserService {
    * @param user User 实体对象
    */
   async updateUser(id: string, user: User): Promise<ResponseResult> {
-    let responseBody = {code: HttpStatus.OK, message: '更新成功'};
-    if (!id){
+    let responseBody = { code: HttpStatus.OK, message: "更新成功" };
+    if (!id) {
       responseBody.code = HttpStatus.BAD_REQUEST;
-      responseBody.message = '用户ID不能为空';
+      responseBody.message = "用户ID不能为空";
       return responseBody;
     }
     let userFind = await this.findOneById(id);
-    if (!userFind){
+    if (!userFind) {
       responseBody.code = HttpStatus.BAD_REQUEST;
-      responseBody.message = '用户不存在';
+      responseBody.message = "用户不存在";
       return responseBody;
     }
     // 更新数据时，删除 id，以避免请求体内传入 id
     user.id !== null && user.id !== undefined && delete user.id;
-    userFind = Object.assign(userFind, user)
+    userFind = Object.assign(userFind, user);
     await this.userRepo.update(id, userFind);
     return responseBody;
   }
@@ -128,7 +133,7 @@ export class UserService {
    * @param user User 实体对象
    */
   async update(id: number, user: User): Promise<ResponseResult> {
-    let responseBody = {code: HttpStatus.OK, message: '更新成功'};
+    let responseBody = { code: HttpStatus.OK, message: "更新成功" };
     await this.userRepo.update(id, user);
     return responseBody;
   }
@@ -154,16 +159,16 @@ export class UserService {
       status: true,
       recent_login_time: true,
       created_at: true,
-      updated_at: true,
+      updated_at: true
     });
     return userFind ?
       {
         code: HttpStatus.OK,
-        message: '查询成功',
+        message: "查询成功",
         data: userFind
       } : {
         code: HttpStatus.NOT_FOUND,
-        message: '用户不存在'
+        message: "用户不存在"
       };
   }
 
@@ -188,16 +193,16 @@ export class UserService {
       status: true,
       recent_login_time: true,
       created_at: true,
-      updated_at: true,
+      updated_at: true
     });
     return userFind ?
       {
         code: HttpStatus.OK,
-        message: '查询成功',
+        message: "查询成功",
         data: userFind
       } : {
         code: HttpStatus.NOT_FOUND,
-        message: '用户不存在'
+        message: "用户不存在"
       };
   }
 
@@ -207,7 +212,7 @@ export class UserService {
    * @param select select conditions
    */
   public async findOneById(id: string, select?: FindOptionsSelect<User>): Promise<User | undefined> {
-    return await this.userRepo.findOne({where: {id}, select});
+    return await this.userRepo.findOne({ where: { id }, select });
   }
 
   /**
@@ -216,7 +221,7 @@ export class UserService {
    * @param select select conditions
    */
   public async findOneByPhone(phone: string, select?: FindOptionsSelect<User>): Promise<User | undefined> {
-    return await this.userRepo.findOne({where: {phone}, select});
+    return await this.userRepo.findOne({ where: { phone }, select });
   }
 
   /**
@@ -226,10 +231,10 @@ export class UserService {
    */
   public async findManyByIds(ids: number[], select?: FindOptionsSelect<User>): Promise<User[] | undefined> {
     return await getRepository(User)
-      .createQueryBuilder('user')
-      .select(['user.id', 'user.username', 'user.avatar', 'user.name'])
-      .where('user.id IN (:...ids)', {ids})
-      .orderBy('user.id')
+      .createQueryBuilder("user")
+      .select(["user.id", "user.username", "user.avatar", "user.name"])
+      .where("user.id IN (:...ids)", { ids })
+      .orderBy("user.id")
       .getMany();
   }
 
@@ -239,7 +244,7 @@ export class UserService {
    @param select select conditions
    */
   public async findOneByUsername(username: string, select?: FindOptionsSelect<User>): Promise<User | undefined> {
-    return await this.userRepo.findOne({where: {username, status: 1}, select});
+    return await this.userRepo.findOne({ where: { username, status: 1 }, select });
   }
 
   /**
@@ -248,6 +253,6 @@ export class UserService {
    @param select select conditions
    */
   public async findOneByAny(custom: FindOptionsWhere<User>, select?: FindOptionsSelect<User>): Promise<User | undefined> {
-    return await this.userRepo.findOne({where: custom, select});
+    return await this.userRepo.findOne({ where: custom, select });
   }
 }

@@ -123,6 +123,46 @@ export class UserController {
     }
   }
 
+  @Post('admin/login')
+  async adminLogin(@Body() loginInfo: { visitor_id: string, phone: string, capture_phone: string }, @Res({passthrough: true}) response: Response): Promise<Response | void | Record<string, any>> {
+    console.log('JWT验证 - Step 1: 用户请求登录');
+    const validateCaptureResult = await this.authService.validateAdminCapturePhone(loginInfo.visitor_id, loginInfo.phone, loginInfo.capture_phone);
+    if (validateCaptureResult) {
+      response.status(validateCaptureResult.code);
+      return validateCaptureResult;
+    }
+
+    const authResult = await this.authService.validateAdminUserByPhone(loginInfo.phone)
+
+    switch (authResult.code) {
+      case 1:
+        const resRight = await this.authService.certificate(authResult.user);
+        response.status(resRight.code);
+        return resRight;
+      case -1:
+        const resNotExist = {
+          code: HttpStatus.NOT_FOUND,
+          message: '用户不存在',
+        };
+        response.status(resNotExist.code);
+        return resNotExist;
+      case 0:
+        const resError = {
+          code: HttpStatus.FORBIDDEN,
+          message: '用户权限错误',
+        };
+        response.status(resError.code);
+        return resError;
+      default:
+        const resDefault = {
+          code: HttpStatus.BAD_REQUEST,
+          message: '账号或密码不正确',
+        };
+        response.status(resDefault.code);
+        return resDefault;
+    }
+  }
+
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard('jwt')) // 使用 'JWT' 进行验证
   @Post('logout')
