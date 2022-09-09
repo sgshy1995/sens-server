@@ -77,9 +77,9 @@ export class AuthController {
     }
 
     @Get('admin/simulation/capture_phone')
-    async getAdminSimulationCapturePhone(@Query() query: {visitor_id: string, phone: string}, @Res({passthrough: true}) response: Response): Promise<Response | void | Record<string, any>> {
+    async getAdminSimulationCapturePhone(@Query() query: {phone: string}, @Res({passthrough: true}) response: Response): Promise<Response | void | Record<string, any>> {
         console.log('query', query)
-        const res = await this.authService.validateAdminSimulationCapturePhone(query.visitor_id, query.phone);
+        const res = await this.authService.validateAdminSimulationCapturePhone(query.phone);
         response.status(res.code);
         return res;
     }

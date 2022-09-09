@@ -217,7 +217,7 @@ export class AuthService {
         }
         if (!errMsg){
             await redis.setex(`admin~phone~${visitor_id}~${phone}`, 300, captcha.text);
-            await redis.setex(`admin~phone~simulation~${visitor_id}~${phone}`, 300, captcha.text);
+            await redis.setex(`admin~phone~simulation~${phone}`, 300, captcha.text);
         }else{
             responseBody.code = HttpStatus.BAD_REQUEST
             responseBody.message = '短信服务器错误'
@@ -405,10 +405,10 @@ export class AuthService {
     }
 
     // admin capture_phone 模拟验证
-    async validateAdminSimulationCapturePhone(visitor_id: string, phone: string): Promise<ResponseResult | undefined> {
+    async validateAdminSimulationCapturePhone(phone: string): Promise<ResponseResult | undefined> {
         // 实例化 redis
         const redis = await RedisInstance.initRedis('auth.capture.phone', 0);
-        const cache = await redis.get(`admin~phone~simulation~${visitor_id}~${phone}`);
+        const cache = await redis.get(`admin~phone~simulation~${phone}`);
         console.log('cache', cache)
         if (!phone){
             return {
