@@ -37,6 +37,9 @@ import { PainQuestionModule } from "./app/pain_question/pain.question.module";
 import { PainReplyModule } from "./app/pain_reply/pain.reply.module";
 import { PainCommentModule } from "./app/pain_comment/pain.comment.module";
 import { PrescriptionModule } from "./app/prescription/prescription.module";
+import { LiveCourseModule } from "./app/live_course/live.course.module";
+import { VideoCourseModule } from "./app/video_course/video.course.module";
+import { CourseInVideoModule } from "./app/course_in_video/course.in.video.module";
 
 @Module({
   imports: [
@@ -64,7 +67,10 @@ import { PrescriptionModule } from "./app/prescription/prescription.module";
     PainQuestionModule,
     PainReplyModule,
     PainCommentModule,
-    PrescriptionModule
+    PrescriptionModule,
+    LiveCourseModule,
+    VideoCourseModule,
+    CourseInVideoModule
   ],
   controllers: [AppController, UserController],
   providers: [
@@ -90,7 +96,11 @@ export class AppModule {
         { path: "pain_question/upload/data", method: RequestMethod.POST },
         { path: "pain_reply/upload/data", method: RequestMethod.POST },
         { path: "prescription/upload/video", method: RequestMethod.POST },
-        { path: "prescription/upload/cover", method: RequestMethod.POST }
+        { path: "prescription/upload/cover", method: RequestMethod.POST },
+        { path: "live_course/upload/cover", method: RequestMethod.POST },
+        { path: "video_course/upload/cover", method: RequestMethod.POST },
+        { path: "course_in_video/upload/cover", method: RequestMethod.POST },
+        { path: "course_in_video/upload/video", method: RequestMethod.POST }
       );
   }
 }
