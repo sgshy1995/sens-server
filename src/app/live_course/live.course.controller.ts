@@ -95,7 +95,7 @@ export class LiveCourseController {
       }
     }
     Object.keys(where).map(key => {
-      if (key === "live_num_range" || key === "price_range") {
+      if (key === "live_num_range" || key === "price_range" || key === "keyword") {
         custom_query[key] = <string>where[key];
       }
       if (!keys.includes(key) || where[key] === undefined || where[key] === null || where[key] === "") {

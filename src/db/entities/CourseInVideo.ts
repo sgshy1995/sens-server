@@ -21,6 +21,9 @@ export class CourseInVideo {
   @Column("varchar", { comment: "视频地址" })
   source: string;
 
+  @Column("varchar", { comment: "视频时长" })
+  time_length: string;
+
   @Column("int", { comment: "视频排序" })
   sort: number;
 

@@ -24,6 +24,9 @@ export class PathMiddleware implements NestMiddleware {
     createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/video_courses/cover/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
     createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/course_in_videos/cover/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
     createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/course_in_videos/video/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
+    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/equipments/long_figure/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
+    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/equipments/cover/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
+    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/equipment_models/multi_figure/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
     next();
   }
 }

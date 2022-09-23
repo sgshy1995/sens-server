@@ -61,6 +61,7 @@ export class CourseInVideoService {
       courseInVideo.publish_time = new Date();
       // 视频数加一
       videoCourseFind.video_num += 1;
+      await this.videoCourseService.updateVideoCourse(videoCourseFind);
     } else if (courseInVideoFind.status === 1 && courseInVideo.status === 0) {
       // 下线 视频数减一，如果已经为0，则自动下架
       videoCourseFind.video_num -= 1;
@@ -141,6 +142,7 @@ export class CourseInVideoService {
       cover: true,
       description: true,
       source: true,
+      time_length: true,
       sort: true,
       publish_time: true,
       status: true,
@@ -168,6 +170,7 @@ export class CourseInVideoService {
       cover: true,
       description: true,
       source: true,
+      time_length: true,
       sort: true,
       publish_time: true,
       status: true,
@@ -188,6 +191,33 @@ export class CourseInVideoService {
   }
 
   /**
+   * 根据课程id，查询多个视频
+   * @param course_id course_id
+   */
+
+  async findManyCourseInVideosByCourseId(course_id: string): Promise<ResponseResult> {
+    const courseInVideosFind = await this.findManyByCourseId(course_id, {
+      id: true,
+      course_id: true,
+      title: true,
+      cover: true,
+      description: true,
+      source: true,
+      time_length: true,
+      sort: true,
+      publish_time: true,
+      status: true,
+      created_at: true,
+      updated_at: true
+    });
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: courseInVideosFind
+    };
+  }
+
+  /**
    * 根据 id 查询
    *
    * @param id id
@@ -200,6 +230,7 @@ export class CourseInVideoService {
       cover: true,
       description: true,
       source: true,
+      time_length: true,
       sort: true,
       publish_time: true,
       status: true,
@@ -246,6 +277,22 @@ export class CourseInVideoService {
       order: { updated_at: "desc" },
       take,
       skip,
+      select
+    });
+  }
+
+  /**
+   * 根据课程id，查询多个视频
+   * @param course_id course_id
+   * @param select select conditions
+   */
+  public async findManyByCourseId(course_id: string, select?: FindOptionsSelect<CourseInVideo>): Promise<CourseInVideo[]> {
+    return await this.courseInVideoRepo.find({
+      where: {
+        course_id,
+        status: 1
+      },
+      order: { sort: "asc" },
       select
     });
   }

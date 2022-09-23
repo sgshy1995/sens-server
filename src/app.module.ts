@@ -40,6 +40,8 @@ import { PrescriptionModule } from "./app/prescription/prescription.module";
 import { LiveCourseModule } from "./app/live_course/live.course.module";
 import { VideoCourseModule } from "./app/video_course/video.course.module";
 import { CourseInVideoModule } from "./app/course_in_video/course.in.video.module";
+import { EquipmentModule } from "./app/equipment/equipment.module";
+import { EquipmentModelModule } from "./app/equipment_model/equipment.model.module";
 
 @Module({
   imports: [
@@ -70,7 +72,9 @@ import { CourseInVideoModule } from "./app/course_in_video/course.in.video.modul
     PrescriptionModule,
     LiveCourseModule,
     VideoCourseModule,
-    CourseInVideoModule
+    CourseInVideoModule,
+    EquipmentModule,
+    EquipmentModelModule
   ],
   controllers: [AppController, UserController],
   providers: [
@@ -100,7 +104,10 @@ export class AppModule {
         { path: "live_course/upload/cover", method: RequestMethod.POST },
         { path: "video_course/upload/cover", method: RequestMethod.POST },
         { path: "course_in_video/upload/cover", method: RequestMethod.POST },
-        { path: "course_in_video/upload/video", method: RequestMethod.POST }
+        { path: "course_in_video/upload/video", method: RequestMethod.POST },
+        { path: "equipment/upload/cover", method: RequestMethod.POST },
+        { path: "equipment/upload/long_figure", method: RequestMethod.POST },
+        { path: "equipment_model/upload/multi_figure", method: RequestMethod.POST }
       );
   }
 }

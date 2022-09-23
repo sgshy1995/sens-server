@@ -1,19 +1,32 @@
-import { HttpStatus, Injectable } from "@nestjs/common";
+import { forwardRef, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, FindOptionsSelect, FindOptionsWhere, Like, getRepository, Between, MoreThan } from "typeorm";
+import {
+  Repository,
+  FindOptionsSelect,
+  FindOptionsWhere,
+  Like,
+  getRepository,
+  Between,
+  MoreThan,
+  getManager, Brackets
+} from "typeorm";
 import { LiveCourse } from "../../db/entities/LiveCourse";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
+import { VideoCourseService } from "../video_course/video.course.service";
 
 type CustomQuery = {
   frequency_num_order?: "desc" | "asc"
   live_num_range?: string | null
   price_range?: string | null
+  keyword?: string
 }
 
 @Injectable()
 export class LiveCourseService {
   constructor(
-    @InjectRepository(LiveCourse) private readonly liveCourseRepo: Repository<LiveCourse>
+    @InjectRepository(LiveCourse) private readonly liveCourseRepo: Repository<LiveCourse>,
+    @Inject(forwardRef(() => VideoCourseService))
+    private readonly videoCourseService: VideoCourseService
   ) {
   }
 
@@ -101,6 +114,34 @@ export class LiveCourseService {
       code: HttpStatus.OK,
       message: "更新成功"
     };
+  }
+
+  /**
+   * 查询轮播课程
+   */
+  async findCarousel(): Promise<LiveCourse[]> {
+    return await this.liveCourseRepo.find({
+      where: { status: 1, carousel: 1 },
+      order: { updated_at: "desc" },
+      select: {
+        id: true,
+        title: true,
+        cover: true,
+        description: true,
+        course_type: true,
+        live_num: true,
+        frequency_num: true,
+        price: true,
+        is_discount: true,
+        discount: true,
+        discount_validity: true,
+        carousel: true,
+        publish_time: true,
+        status: true,
+        created_at: true,
+        updated_at: true
+      }
+    });
   }
 
   /**
@@ -249,7 +290,23 @@ export class LiveCourseService {
       "4": [3000, 10000],
       "5": 10000
     };
-    const prescriptions = await this.liveCourseRepo.findAndCount({
+    if (custom_query_in.keyword){
+      custom.hasOwnProperty('description') && delete custom.description
+      custom.hasOwnProperty('title') && delete custom.title
+    }
+    const customIn = {
+      ...custom,
+      live_num: ["0", "1", "2", "3"].includes(custom_query_in.live_num_range) ?
+        Between.apply(null, watch_num_map[custom_query_in.live_num_range]) :
+        custom_query_in.live_num_range === "4" ? MoreThan(watch_num_map["4"]) : custom.live_num,
+      price: ["0", "1", "2", "3", "4"].includes(custom_query_in.price_range) ?
+        Between.apply(null, price_map[custom_query_in.price_range]) :
+        custom_query_in.price_range === "5" ? MoreThan(price_map["5"]) : custom.price
+    }
+    Object.keys(customIn).map(key=>{
+      if (customIn[key] === undefined) delete customIn[key]
+    })
+    /*const prescriptions = await this.liveCourseRepo.findAndCount({
       where: {
         ...custom,
         live_num: ["0", "1", "2", "3"].includes(custom_query_in.live_num_range) ?
@@ -263,13 +320,25 @@ export class LiveCourseService {
       take,
       skip,
       select
-    });
+    });*/
+    const liveCourses = await getManager().createQueryBuilder(LiveCourse, 'live_course')
+      .groupBy('live_course.id')
+      .select(Object.keys(select).map(key=>`live_course.${key}`))
+      .where(customIn)
+      .andWhere(new Brackets(qb => {
+        qb.where('live_course.description LIKE :description', { description: `%${custom_query_in.keyword || ''}%` })
+          .orWhere('live_course.title LIKE :title', { title: `%${custom_query_in.keyword || ''}%` })
+      }))
+      .orderBy("live_course.updated_at", "DESC")
+      .take(take)
+      .skip(skip)
+      .getManyAndCount();
     if (hot_order || custom_query_in.frequency_num_order === "desc") {
-      prescriptions[0] = prescriptions[0].sort((a, b) => b.frequency_num - a.frequency_num);
+      liveCourses[0] = liveCourses[0].sort((a, b) => b.frequency_num - a.frequency_num);
     } else if (custom_query_in.frequency_num_order === "asc") {
-      prescriptions[0] = prescriptions[0].sort((a, b) => a.frequency_num - b.frequency_num);
+      liveCourses[0] = liveCourses[0].sort((a, b) => a.frequency_num - b.frequency_num);
     }
-    return prescriptions;
+    return liveCourses;
   }
 
   /**

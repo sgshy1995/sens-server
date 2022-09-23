@@ -14,7 +14,7 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { Response, Request } from "express";
-import { VideoCourseService } from "./video.course.service";
+import { EquipmentModelService } from "./equipment.model.service";
 
 import { AuthGuard } from "@nestjs/passport";
 import { TokenGuard } from "../../guards/token.guard";
@@ -26,22 +26,22 @@ import moment = require("moment");
 import multer = require("multer");
 import { ResponseResult } from "../../types/result.interface";
 import { getConnection } from "typeorm";
-import { VideoCourse } from "../../db/entities/VideoCourse";
+import { EquipmentModel } from "../../db/entities/EquipmentModel";
 
-@Controller("video_course")
-export class VideoCourseController {
+@Controller("equipment_model")
+export class EquipmentModelController {
   constructor(
-    private readonly videoCourseService: VideoCourseService
+    private readonly equipmentModelService: EquipmentModelService
   ) {
   }
 
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
-  @Post("upload/cover")
+  @Post("upload/multi_figure")
   @UseInterceptors(FileInterceptor("file", {
     storage: multer.diskStorage({
       destination: (req, file, cb) => {
-        cb(null, path.join(process.env.UPLOAD_PATH, `/video_courses/cover/${moment(new Date(), "YYYY-MM-DD").format("YYYY-MM-DD")}`));
+        cb(null, path.join(process.env.UPLOAD_PATH, `/equipment_models/multi_figure/${moment(new Date(), "YYYY-MM-DD").format("YYYY-MM-DD")}`));
       },
       filename: (req, file, cb) => {
         // 自定义文件名
@@ -50,7 +50,7 @@ export class VideoCourseController {
       }
     })
   }))
-  async uploadDataCover(@UploadedFile() file, @Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
+  async uploadDataMultiFigure(@UploadedFile() file, @Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
     console.log(file);
     const res = {
       code: HttpStatus.OK,
@@ -63,18 +63,9 @@ export class VideoCourseController {
 
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
-  @Get("carousel")
-  async findCarouselCourses(@Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
-    const res = await this.videoCourseService.findCarouselCourses();
-    response.status(res.code);
-    return res;
-  }
-
-  @UseGuards(new TokenGuard()) // 使用 token redis 验证
-  @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Get()
-  async findAllVideoCourses(@Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
-    const res = await this.videoCourseService.findAllVideoCourses();
+  async findAllEquipmentModels(@Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
+    const res = await this.equipmentModelService.findAllEquipmentModels();
     response.status(res.code);
     return res;
   }
@@ -82,8 +73,8 @@ export class VideoCourseController {
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Post()
-  async createVideoCourse(@Body() videoCourse: VideoCourse, @Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
-    const res = await this.videoCourseService.createVideoCourse(videoCourse);
+  async createEquipmentModel(@Body() equipmentModel: EquipmentModel, @Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
+    const res = await this.equipmentModelService.createEquipmentModel(equipmentModel);
     response.status(res.code);
     return res;
   }
@@ -91,20 +82,20 @@ export class VideoCourseController {
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Get("custom")
-  async findManyVideoCourses(@Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
+  async findManyEquipmentModels(@Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
     const { query } = request;
     const hot_order = !!query.hot_order;
     const query_pagination = { pageNo: Number(query.pageNo) || 1, pageSize: Number(query.pageSize) || 8 };
     const where = { ...query };
-    const custom_query: Record<string, string> = {};
-    const keys = getConnection().getMetadata(VideoCourse).ownColumns.map(column => column.propertyName);
-    if (where.sortField && where.sortOrder) {
-      if (where.sortField === "frequency_num") {
-        custom_query.frequency_num_order = where.sortOrder === "descend" ? "desc" : "asc";
+    const custom_query:Record<string,string> = {};
+    const keys = getConnection().getMetadata(EquipmentModel).ownColumns.map(column => column.propertyName);
+    if (where.sortField && where.sortOrder){
+      if (where.sortField === 'frequency_num'){
+        custom_query.frequency_num_order = where.sortOrder === 'descend' ? 'desc' : 'asc'
       }
     }
     Object.keys(where).map(key => {
-      if (key === "video_num_range" || key === "price_range" || key === "keyword") {
+      if (key === "price_range") {
         custom_query[key] = <string>where[key];
       }
       if (!keys.includes(key) || where[key] === undefined || where[key] === null || where[key] === "") {
@@ -112,7 +103,7 @@ export class VideoCourseController {
       }
     });
     console.log("where", where);
-    const res = await this.videoCourseService.findManyVideoCourses(where, query_pagination, custom_query, hot_order);
+    const res = await this.equipmentModelService.findManyEquipmentModels(where, query_pagination, custom_query, hot_order);
     response.status(res.code);
     return res;
   }
@@ -120,8 +111,8 @@ export class VideoCourseController {
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Get(":id")
-  async findOneVideoCourseById(@Param("id") id: string, @Res({ passthrough: true }) response: Response): Promise<Response | void | Record<string, any>> {
-    const res = await this.videoCourseService.findOneVideoCourseById(id);
+  async findOneEquipmentModelById(@Param("id") id: string, @Res({ passthrough: true }) response: Response): Promise<Response | void | Record<string, any>> {
+    const res = await this.equipmentModelService.findOneEquipmentModelById(id);
     response.status(res.code);
     return res;
   }
@@ -129,8 +120,8 @@ export class VideoCourseController {
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Put()
-  async updateVideoCourse(@Body() videoCourse: VideoCourse, @Res({ passthrough: true }) response: Response): Promise<ResponseResult> {
-    const res = await this.videoCourseService.updateVideoCourse(videoCourse);
+  async updateEquipmentModel(@Body() equipmentModel: EquipmentModel, @Res({ passthrough: true }) response: Response): Promise<ResponseResult> {
+    const res = await this.equipmentModelService.updateEquipmentModel(equipmentModel);
     response.status(res.code);
     return res;
   }
@@ -138,10 +129,10 @@ export class VideoCourseController {
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Put("batch")
-  async batchUpdateVideoCoursesStatus(@Body() body: { ids: string, status: number }, @Res({ passthrough: true }) response: Response): Promise<ResponseResult> {
+  async batchUpdateEquipmentModelsStatus(@Body() body: { ids: string, status: number }, @Res({ passthrough: true }) response: Response): Promise<ResponseResult> {
     const { ids, status } = body;
     const idsIn = (ids || "").split(",");
-    const res = await this.videoCourseService.updateManyStatusByIds(idsIn, status);
+    const res = await this.equipmentModelService.updateManyStatusByIds(idsIn, status);
     response.status(res.code);
     return res;
   }

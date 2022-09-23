@@ -1,14 +1,17 @@
 import { forwardRef, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, FindOptionsSelect, FindOptionsWhere, Like, getRepository, Between, MoreThan } from "typeorm";
+import { Repository, FindOptionsSelect, FindOptionsWhere, Like, getRepository, Between, MoreThan, getManager, Brackets } from "typeorm";
 import { VideoCourse } from "../../db/entities/VideoCourse";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
 import { CourseInVideoService } from "../course_in_video/course.in.video.service";
+import { LiveCourseService } from "../live_course/live.course.service";
+import { LiveCourse } from "../../db/entities/LiveCourse";
 
 type CustomQuery = {
   frequency_num_order?: "desc" | "asc"
   video_num_range?: string | null
   price_range?: string | null
+  keyword?: string
 }
 
 @Injectable()
@@ -16,7 +19,9 @@ export class VideoCourseService {
   constructor(
     @InjectRepository(VideoCourse) private readonly videoCourseRepo: Repository<VideoCourse>,
     @Inject(forwardRef(() => CourseInVideoService))
-    private readonly courseInVideoService: CourseInVideoService
+    private readonly courseInVideoService: CourseInVideoService,
+    @Inject(forwardRef(() => LiveCourseService))
+    private readonly liveCourseService: LiveCourseService
   ) {
   }
 
@@ -108,6 +113,48 @@ export class VideoCourseService {
       code: HttpStatus.OK,
       message: "更新成功"
     };
+  }
+
+  /**
+   * 轮播课程
+   */
+  async findCarouselCourses(): Promise<ResponseResult> {
+    const videoCarouselCourses = await this.findCarousel();
+    const liveCarouselCourses = await this.liveCourseService.findCarousel();
+    const allCarouselCourses: (VideoCourse | LiveCourse)[] = [...videoCarouselCourses, ...liveCarouselCourses].sort((a, b) => b.created_at.getTime() - a.created_at.getTime()).slice(0, 5);
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: allCarouselCourses
+    };
+  }
+
+  /**
+   * 查询轮播课程
+   */
+  async findCarousel(): Promise<VideoCourse[]> {
+    return await this.videoCourseRepo.find({
+      where: { status: 1, carousel: 1 },
+      order: { updated_at: "desc" },
+      select: {
+        id: true,
+        title: true,
+        cover: true,
+        description: true,
+        course_type: true,
+        video_num: true,
+        frequency_num: true,
+        price: true,
+        is_discount: true,
+        discount: true,
+        discount_validity: true,
+        carousel: true,
+        publish_time: true,
+        status: true,
+        created_at: true,
+        updated_at: true
+      }
+    });
   }
 
   /**
@@ -256,7 +303,7 @@ export class VideoCourseService {
       "4": [3000, 10000],
       "5": 10000
     };
-    const prescriptions = await this.videoCourseRepo.findAndCount({
+    /*const prescriptions = await this.videoCourseRepo.findAndCount({
       where: {
         ...custom,
         video_num: ["0", "1", "2", "3"].includes(custom_query_in.video_num_range) ?
@@ -270,13 +317,41 @@ export class VideoCourseService {
       take,
       skip,
       select
-    });
-    if (hot_order || custom_query_in.frequency_num_order === "desc") {
-      prescriptions[0] = prescriptions[0].sort((a, b) => b.frequency_num - a.frequency_num);
-    } else if (custom_query_in.frequency_num_order === "asc") {
-      prescriptions[0] = prescriptions[0].sort((a, b) => a.frequency_num - b.frequency_num);
+    });*/
+    if (custom_query_in.keyword){
+      custom.hasOwnProperty('description') && delete custom.description
+      custom.hasOwnProperty('title') && delete custom.title
     }
-    return prescriptions;
+    const customIn = {
+      ...custom,
+      video_num: ["0", "1", "2", "3"].includes(custom_query_in.video_num_range) ?
+        Between.apply(null, video_num_map[custom_query_in.video_num_range]) :
+        custom_query_in.video_num_range === "4" ? MoreThan(video_num_map["4"]) : custom.video_num,
+      price: ["0", "1", "2", "3", "4"].includes(custom_query_in.price_range) ?
+        Between.apply(null, price_map[custom_query_in.price_range]) :
+        custom_query_in.price_range === "5" ? MoreThan(price_map["5"]) : custom.price
+    }
+    Object.keys(customIn).map(key=>{
+      if (customIn[key] === undefined) delete customIn[key]
+    })
+    const videoCourses = await getManager().createQueryBuilder(VideoCourse,'video_course')
+      .groupBy('video_course.id')
+      .select(Object.keys(select).map(key=>`video_course.${key}`))
+      .where(customIn)
+      .andWhere(new Brackets(qb => {
+        qb.where('video_course.description LIKE :description', { description: `%${custom_query_in.keyword || ''}%` })
+          .orWhere('video_course.title LIKE :title', { title: `%${custom_query_in.keyword || ''}%` })
+      }))
+      .orderBy("video_course.updated_at", "DESC")
+      .take(take)
+      .skip(skip)
+      .getManyAndCount();
+    if (hot_order || custom_query_in.frequency_num_order === "desc") {
+      videoCourses[0] = videoCourses[0].sort((a, b) => b.frequency_num - a.frequency_num);
+    } else if (custom_query_in.frequency_num_order === "asc") {
+      videoCourses[0] = videoCourses[0].sort((a, b) => a.frequency_num - b.frequency_num);
+    }
+    return videoCourses;
   }
 
   /**
@@ -286,6 +361,7 @@ export class VideoCourseService {
   public async findAll(select?: FindOptionsSelect<VideoCourse>): Promise<VideoCourse[] | undefined> {
     return await this.videoCourseRepo.find({
       where: { status: 1 },
+
       order: { updated_at: "asc" },
       select
     });
