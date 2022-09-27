@@ -1,12 +1,23 @@
 import { forwardRef, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, FindOptionsSelect, FindOptionsWhere, Like, getRepository, Between, MoreThan } from "typeorm";
+import {
+  Repository,
+  FindOptionsSelect,
+  FindOptionsWhere,
+  Like,
+  getRepository,
+  Between,
+  MoreThan,
+  getManager, Brackets
+} from "typeorm";
 import { Equipment } from "../../db/entities/Equipment";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
 import { EquipmentModelService } from "../equipment_model/equipment.model.service";
+import { VideoCourse } from "../../db/entities/VideoCourse";
 
 type CustomQuery = {
   frequency_total_num_order?: "desc" | "asc"
+  keyword?: string
 }
 
 @Injectable()
@@ -28,6 +39,12 @@ export class EquipmentService {
     equipment.id !== null && equipment.id !== undefined && delete equipment.id;
     // 购买人数
     equipment.frequency_total_num = 0;
+    // 型号数
+    equipment.model_num = 0;
+    // 状态
+    equipment.status = equipment.status ? 1 : 0;
+    // 是否包含折扣
+    equipment.has_discount = 0;
     // 发布时间
     equipment.publish_time = equipment.status === 0 ? null : new Date();
     await this.equipmentRepo.save(equipment);
@@ -51,6 +68,22 @@ export class EquipmentService {
       code: HttpStatus.OK,
       message: "更新成功"
     };
+  }
+
+  /**
+   * 校验器材编号是否重复
+   *
+   * @param serial_number serial_number
+   * @param id id
+   */
+  async checkEquipmentSerialNumber(serial_number: string, id?: string): Promise<ResponseResult> {
+    let responseBody = { code: HttpStatus.OK, message: "校验成功", data: true };
+    const equipmentFind = await this.equipmentRepo.findOne({ where: { serial_number } });
+    if (equipmentFind && equipmentFind.id !== id) {
+      responseBody.data = false;
+      responseBody.message = '器材编号已存在'
+    }
+    return responseBody;
   }
 
   /**
@@ -81,10 +114,43 @@ export class EquipmentService {
   }
 
   /**
+   * 查询轮播器材
+   */
+  async findCarouselEquipments(): Promise<ResponseResult> {
+    const carouselEquipments = await this.equipmentRepo.find({
+      where: { status: 1, carousel: 1 },
+      order: { updated_at: "desc" },
+      select: {
+        id: true,
+        serial_number: true,
+        title: true,
+        cover: true,
+        description: true,
+        long_figure: true,
+        equipment_type: true,
+        model_num: true,
+        frequency_total_num: true,
+        has_discount: true,
+        carousel: true,
+        publish_time: true,
+        status: true,
+        created_at: true,
+        updated_at: true
+      }
+    });
+    carouselEquipments.splice(5);
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: carouselEquipments
+    };
+  }
+
+  /**
    * 查询所有的器材
    */
   async findAllEquipments(): Promise<ResponseResult> {
-    const liveCoursesFind = await this.findAll({
+    const equipmentsFind = await this.findAll({
       id: true,
       serial_number: true,
       title: true,
@@ -92,7 +158,9 @@ export class EquipmentService {
       description: true,
       long_figure: true,
       equipment_type: true,
+      model_num: true,
       frequency_total_num: true,
+      has_discount: true,
       carousel: true,
       publish_time: true,
       status: true,
@@ -102,7 +170,7 @@ export class EquipmentService {
     return {
       code: HttpStatus.OK,
       message: "查询成功",
-      data: liveCoursesFind
+      data: equipmentsFind
     };
   }
 
@@ -123,7 +191,9 @@ export class EquipmentService {
       description: true,
       long_figure: true,
       equipment_type: true,
+      model_num: true,
       frequency_total_num: true,
+      has_discount: true,
       carousel: true,
       publish_time: true,
       status: true,
@@ -149,7 +219,7 @@ export class EquipmentService {
    * @param id id
    */
   async findOneEquipmentById(id: string): Promise<ResponseResult> {
-    const liveCourseFind = await this.findOneById(id, {
+    const equipmentFind = await this.findOneById(id, {
       id: true,
       serial_number: true,
       title: true,
@@ -157,18 +227,20 @@ export class EquipmentService {
       description: true,
       long_figure: true,
       equipment_type: true,
+      model_num: true,
       frequency_total_num: true,
+      has_discount: true,
       carousel: true,
       publish_time: true,
       status: true,
       created_at: true,
       updated_at: true
     });
-    return liveCourseFind ?
+    return equipmentFind ?
       {
         code: HttpStatus.OK,
         message: "查询成功",
-        data: liveCourseFind
+        data: equipmentFind
       } : {
         code: HttpStatus.NOT_FOUND,
         message: "记录不存在"
@@ -193,22 +265,35 @@ export class EquipmentService {
    * @param select select conditions
    */
   public async findMany(custom: FindOptionsWhere<Equipment>, query: PaginationQuery, custom_query?: CustomQuery, hot_order?: boolean, select?: FindOptionsSelect<Equipment>): Promise<[Equipment[], number]> {
-    const take = query.pageSize || 8;
+    const take = query.pageSize || 16;
     const page = query.pageNo || 1;
     const skip = (page - 1) * take;
     const custom_query_in: CustomQuery = custom_query ? { ...custom_query } : {};
     if (custom.title) {
       custom.title = Like(`%${custom.title}%`);
     }
-    const equipments = await this.equipmentRepo.findAndCount({
-      where: {
-        ...custom
-      },
-      order: { updated_at: "desc" },
-      take,
-      skip,
-      select
+    if (custom_query_in.keyword) {
+      custom.hasOwnProperty("description") && delete custom.description;
+      custom.hasOwnProperty("title") && delete custom.title;
+    }
+    const customIn = {
+      ...custom
+    };
+    Object.keys(customIn).map(key => {
+      if (customIn[key] === undefined) delete customIn[key];
     });
+    const equipments = await getManager().createQueryBuilder(Equipment, "equipment")
+      .groupBy("equipment.id")
+      .select(Object.keys(select).map(key => `equipment.${key}`))
+      .where(customIn)
+      .andWhere(new Brackets(qb => {
+        qb.where("equipment.description LIKE :description", { description: `%${custom_query_in.keyword || ""}%` })
+          .orWhere("equipment.title LIKE :title", { title: `%${custom_query_in.keyword || ""}%` });
+      }))
+      .orderBy("equipment.updated_at", "DESC")
+      .take(take)
+      .skip(skip)
+      .getManyAndCount();
     if (hot_order || custom_query_in.frequency_total_num_order === "desc") {
       equipments[0] = equipments[0].sort((a, b) => b.frequency_total_num - a.frequency_total_num);
     } else if (custom_query_in.frequency_total_num_order === "asc") {

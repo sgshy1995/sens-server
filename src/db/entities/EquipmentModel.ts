@@ -45,6 +45,9 @@ export class EquipmentModel {
   @Column("varchar", { comment: "发货地" })
   dispatch_place: string;
 
+  @Column("int", { comment: "型号排序" })
+  sort: number;
+
   @Column("timestamp", { comment: "发布时间", nullable: true })
   publish_time?: Date;
 

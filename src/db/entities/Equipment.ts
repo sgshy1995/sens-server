@@ -24,8 +24,14 @@ export class Equipment {
   @Column("int", { comment: "器材类型 0 康复训练器材 1 康复理疗设备 2 康复治疗师工具" })
   equipment_type: number;
 
+  @Column("int", { comment: "型号数量" })
+  model_num: number;
+
   @Column("int", { comment: "购买总次数" })
   frequency_total_num: number;
+
+  @Column("int", { comment: "是否包含折扣 1 是 0 否" })
+  has_discount: number;
 
   @Column("int", { comment: "是否轮播 1 是 0 否" })
   carousel: number;

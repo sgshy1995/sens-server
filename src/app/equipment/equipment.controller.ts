@@ -98,6 +98,26 @@ export class EquipmentController {
 
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
+  @Get("carousel")
+  async findCarouselEquipments(@Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
+    const res = await this.equipmentService.findCarouselEquipments();
+    response.status(res.code);
+    return res;
+  }
+
+  @UseGuards(new TokenGuard()) // 使用 token redis 验证
+  @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
+  @Get("check")
+  async checkEquipmentSerialNumber(@Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
+    const { query } = request;
+    const { serial_number = "", id = "" } = query;
+    const res = await this.equipmentService.checkEquipmentSerialNumber(serial_number.toString(), id.toString());
+    response.status(res.code);
+    return res;
+  }
+
+  @UseGuards(new TokenGuard()) // 使用 token redis 验证
+  @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Post()
   async createEquipment(@Body() equipment: Equipment, @Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
     const res = await this.equipmentService.createEquipment(equipment);
@@ -111,16 +131,19 @@ export class EquipmentController {
   async findManyEquipments(@Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
     const { query } = request;
     const hot_order = !!query.hot_order;
-    const query_pagination = { pageNo: Number(query.pageNo) || 1, pageSize: Number(query.pageSize) || 8 };
+    const query_pagination = { pageNo: Number(query.pageNo) || 1, pageSize: Number(query.pageSize) || 16 };
     const where = { ...query };
-    const custom_query:Record<string,string> = {};
+    const custom_query: Record<string, string> = {};
     const keys = getConnection().getMetadata(Equipment).ownColumns.map(column => column.propertyName);
-    if (where.sortField && where.sortOrder){
-      if (where.sortField === 'frequency_total_num'){
-        custom_query.frequency_total_num_order = where.sortOrder === 'descend' ? 'desc' : 'asc'
+    if (where.sortField && where.sortOrder) {
+      if (where.sortField === "frequency_total_num") {
+        custom_query.frequency_total_num_order = where.sortOrder === "descend" ? "desc" : "asc";
       }
     }
     Object.keys(where).map(key => {
+      if (key === "keyword") {
+        custom_query[key] = <string>where[key];
+      }
       if (!keys.includes(key) || where[key] === undefined || where[key] === null || where[key] === "") {
         delete where[key];
       }

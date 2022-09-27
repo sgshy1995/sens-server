@@ -87,11 +87,11 @@ export class EquipmentModelController {
     const hot_order = !!query.hot_order;
     const query_pagination = { pageNo: Number(query.pageNo) || 1, pageSize: Number(query.pageSize) || 8 };
     const where = { ...query };
-    const custom_query:Record<string,string> = {};
+    const custom_query: Record<string, string> = {};
     const keys = getConnection().getMetadata(EquipmentModel).ownColumns.map(column => column.propertyName);
-    if (where.sortField && where.sortOrder){
-      if (where.sortField === 'frequency_num'){
-        custom_query.frequency_num_order = where.sortOrder === 'descend' ? 'desc' : 'asc'
+    if (where.sortField && where.sortOrder) {
+      if (where.sortField === "frequency_num") {
+        custom_query.frequency_num_order = where.sortOrder === "descend" ? "desc" : "asc";
       }
     }
     Object.keys(where).map(key => {
@@ -119,6 +119,15 @@ export class EquipmentModelController {
 
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
+  @Get("equipment/:equipment_id")
+  async findManyCourseInVideosByCourseId(@Param("equipment_id") equipment_id: string, @Res({ passthrough: true }) response: Response): Promise<Response | void | Record<string, any>> {
+    const res = await this.equipmentModelService.findManyEquipmentModelsByEquipmentId(equipment_id);
+    response.status(res.code);
+    return res;
+  }
+
+  @UseGuards(new TokenGuard()) // 使用 token redis 验证
+  @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Put()
   async updateEquipmentModel(@Body() equipmentModel: EquipmentModel, @Res({ passthrough: true }) response: Response): Promise<ResponseResult> {
     const res = await this.equipmentModelService.updateEquipmentModel(equipmentModel);
@@ -129,10 +138,10 @@ export class EquipmentModelController {
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Put("batch")
-  async batchUpdateEquipmentModelsStatus(@Body() body: { ids: string, status: number }, @Res({ passthrough: true }) response: Response): Promise<ResponseResult> {
-    const { ids, status } = body;
+  async batchUpdateEquipmentModelsStatus(@Body() body: { ids: string, status: number, equipment_id: string }, @Res({ passthrough: true }) response: Response): Promise<ResponseResult> {
+    const { ids, status, equipment_id } = body;
     const idsIn = (ids || "").split(",");
-    const res = await this.equipmentModelService.updateManyStatusByIds(idsIn, status);
+    const res = await this.equipmentModelService.updateManyStatusByIds(idsIn, equipment_id, status);
     response.status(res.code);
     return res;
   }

@@ -27,6 +27,14 @@ export class EquipmentModelService {
     let responseBody = { code: HttpStatus.OK, message: "创建成功" };
     // 插入数据时，删除 id，以避免请求体内传入 id
     equipmentModel.id !== null && equipmentModel.id !== undefined && delete equipmentModel.id;
+    // 校验器材
+    const equipmentFind = await this.equipmentService.findOneById(equipmentModel.equipment_id);
+    if (!equipmentFind){
+      return {
+        code: HttpStatus.NOT_FOUND,
+        message: "器材主体无效"
+      };
+    }
     // 购买人数
     equipmentModel.frequency_num = 0;
     // 折扣期限
@@ -34,6 +42,15 @@ export class EquipmentModelService {
     // 发布时间
     equipmentModel.publish_time = equipmentModel.status === 0 ? null : new Date();
     await this.equipmentModelRepo.save(equipmentModel);
+    // 如果上线 更新型号数 +1
+    if(equipmentModel.status) {
+      equipmentFind.model_num += 1;
+      // 如果有折扣，则器材包含折扣
+      if (equipmentModel.is_discount){
+        equipmentFind.has_discount = 1;
+      }
+      await this.equipmentService.updateEquipment(equipmentFind);
+    }
     return responseBody;
   }
 
@@ -43,20 +60,48 @@ export class EquipmentModelService {
    * @param equipmentModel equipmentModel 实体对象
    */
   async updateEquipmentModel(equipmentModel: EquipmentModel): Promise<ResponseResult> {
-    const equipmentModelFind = await this.equipmentModelRepo.findOne({ where: { id: equipmentModel.id } });
-    if (equipmentModelFind.status === 0 && equipmentModel.status === 1) {
-      // 发布
-      equipmentModel.publish_time = new Date();
+    // 校验器材
+    const equipmentFind = await this.equipmentService.findOneById(equipmentModel.equipment_id);
+    if (!equipmentFind) {
+      return {
+        code: HttpStatus.NOT_FOUND,
+        message: "器材主体无效"
+      };
     }
+    const equipmentModelFind = await this.equipmentModelRepo.findOne({ where: { id: equipmentModel.id } });
+
     if (equipmentModelFind.is_discount === 0 && equipmentModel.is_discount === 1) {
       // 折扣
       equipmentModel.discount_validity = equipmentModel.discount_validity ? new Date(equipmentModel.discount_validity) : null;
+      equipmentFind.has_discount = 1;
     } else if (equipmentModelFind.is_discount === 1 && equipmentModel.is_discount === 0) {
       // 取消折扣
       equipmentModel.discount_validity = null;
     }
+
+    if (equipmentModelFind.status === 0 && equipmentModel.status === 1) {
+      // 发布
+      equipmentModel.publish_time = new Date();
+      // 型号数加一
+      equipmentFind.model_num += 1;
+    }else if (equipmentModelFind.status === 1 && equipmentModel.status === 0) {
+      // 下线 型号数减一，如果已经为0，则自动下架
+      equipmentFind.model_num -= 1;
+      if (equipmentFind.model_num === 0) {
+        equipmentFind.status = 0;
+      }
+    }
+
     const equipmentModelUpdate = Object.assign(equipmentModelFind, equipmentModel);
     await this.equipmentModelRepo.update(equipmentModelUpdate.id, equipmentModelUpdate);
+
+    // 更新器材包含折扣信息
+    const equipmentModelsFind = await this.findManyByEquipmentId(equipmentModel.equipment_id);
+    if (!equipmentModelsFind.find(item=>item.is_discount)){
+      equipmentFind.has_discount = 0;
+    }
+    await this.equipmentService.updateEquipment(equipmentFind);
+
     return {
       code: HttpStatus.OK,
       message: "更新成功"
@@ -85,16 +130,33 @@ export class EquipmentModelService {
   /**
    * 根据 ids 批量更新状态
    * @param ids ids
+   * @param equipment_id equipment_id
    * @param status status
    * @param select select conditions
    */
-  public async updateManyStatusByIds(ids: string[], status: number, select?: FindOptionsSelect<EquipmentModel>): Promise<ResponseResult> {
+  public async updateManyStatusByIds(ids: string[], equipment_id: string, status: number, select?: FindOptionsSelect<EquipmentModel>): Promise<ResponseResult> {
     const equipmentModelsFind = await getRepository(EquipmentModel)
       .createQueryBuilder("equipmentModel")
       .select()
       .where("equipmentModel.id IN (:...ids)", { ids })
       .orderBy("equipmentModel.updated_at", "DESC")
       .getMany();
+    // 校验所有的视频的课程id是否一致且正确
+    const errorOneFind = equipmentModelsFind.find(item => item.equipment_id !== equipment_id);
+    if (!errorOneFind) {
+      return {
+        code: HttpStatus.BAD_REQUEST,
+        message: "器材主体id不一致"
+      };
+    }
+    // 校验器材
+    const equipmentFind = await this.equipmentService.findOneById(equipment_id);
+    if (!equipmentFind) {
+      return {
+        code: HttpStatus.NOT_FOUND,
+        message: "器材主体无效"
+      };
+    }
     for (let i = 0; i < equipmentModelsFind.length; i++) {
       if (equipmentModelsFind[i].status === 0 && status === 1) {
         // 发布
@@ -103,6 +165,17 @@ export class EquipmentModelService {
       equipmentModelsFind[i].status = status;
       await this.equipmentModelRepo.update(equipmentModelsFind[i].id, equipmentModelsFind[i]);
     }
+    // 视频数变化 若为0则自动下架
+    status ? equipmentFind.model_num += equipmentModelsFind.length : equipmentFind.model_num -= equipmentModelsFind.length;
+    if (equipmentFind.model_num === 0) {
+      equipmentFind.status = 0;
+    }
+    // 更新器材包含折扣信息
+    const equipmentModelsNewFind = await this.findManyByEquipmentId(equipment_id);
+    if (!equipmentModelsNewFind.find(item=>item.is_discount)){
+      equipmentFind.has_discount = 0;
+    }
+    await this.equipmentService.updateEquipment(equipmentFind);
     return {
       code: HttpStatus.OK,
       message: "更新成功"
@@ -113,7 +186,7 @@ export class EquipmentModelService {
    * 查询所有的型号
    */
   async findAllEquipmentModels(): Promise<ResponseResult> {
-    const equipmentsFind = await this.findAll({
+    const equipmentModelsFind = await this.findAll({
       id: true,
       title: true,
       description: true,
@@ -127,6 +200,7 @@ export class EquipmentModelService {
       discount_validity: true,
       inventory: true,
       dispatch_place: true,
+      sort: true,
       publish_time: true,
       status: true,
       created_at: true,
@@ -135,7 +209,7 @@ export class EquipmentModelService {
     return {
       code: HttpStatus.OK,
       message: "查询成功",
-      data: equipmentsFind
+      data: equipmentModelsFind
     };
   }
 
@@ -148,7 +222,7 @@ export class EquipmentModelService {
    */
 
   async findManyEquipmentModels(custom: FindOptionsWhere<EquipmentModel>, query: PaginationQuery, custom_query?: CustomQuery, hot_sort: boolean = false): Promise<ResponsePaginationResult> {
-    const [equipmentsFind, totalCount] = await this.findMany(custom, query, custom_query, hot_sort, {
+    const [equipmentModelsFind, totalCount] = await this.findMany(custom, query, custom_query, hot_sort, {
       id: true,
       title: true,
       description: true,
@@ -162,6 +236,7 @@ export class EquipmentModelService {
       discount_validity: true,
       inventory: true,
       dispatch_place: true,
+      sort: true,
       publish_time: true,
       status: true,
       created_at: true,
@@ -171,12 +246,44 @@ export class EquipmentModelService {
       code: HttpStatus.OK,
       message: "查询成功",
       data: {
-        data: equipmentsFind,
+        data: equipmentModelsFind,
         pageSize: query.pageSize,
         pageNo: query.pageNo,
         totalCount: totalCount,
         totalPage: Math.ceil(totalCount / query.pageSize)
       }
+    };
+  }
+
+  /**
+   * 根据器材id，查询多个型号
+   * @param equipment_id equipment_id
+   */
+  async findManyEquipmentModelsByEquipmentId(equipment_id: string): Promise<ResponseResult> {
+    const equipmentModelsFind = await this.findManyByEquipmentId(equipment_id, {
+      id: true,
+      title: true,
+      description: true,
+      multi_figure: true,
+      parameter: true,
+      brand: true,
+      frequency_num: true,
+      price: true,
+      is_discount: true,
+      discount: true,
+      discount_validity: true,
+      inventory: true,
+      dispatch_place: true,
+      sort: true,
+      publish_time: true,
+      status: true,
+      created_at: true,
+      updated_at: true
+    });
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: equipmentModelsFind
     };
   }
 
@@ -200,6 +307,7 @@ export class EquipmentModelService {
       discount_validity: true,
       inventory: true,
       dispatch_place: true,
+      sort: true,
       publish_time: true,
       status: true,
       created_at: true,
@@ -268,6 +376,22 @@ export class EquipmentModelService {
       equipmentModels[0] = equipmentModels[0].sort((a, b) => a.frequency_num - b.frequency_num);
     }
     return equipmentModels;
+  }
+
+  /**
+   * 根据器材id，查询多个型号
+   * @param equipment_id equipment_id
+   * @param select select conditions
+   */
+  public async findManyByEquipmentId(equipment_id: string, select?: FindOptionsSelect<EquipmentModel>): Promise<EquipmentModel[]> {
+    return await this.equipmentModelRepo.find({
+      where: {
+        equipment_id,
+        status: 1
+      },
+      order: { sort: "asc" },
+      select
+    });
   }
 
   /**
