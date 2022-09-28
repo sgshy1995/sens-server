@@ -6,14 +6,11 @@ import {
   FindOptionsWhere,
   Like,
   getRepository,
-  Between,
-  MoreThan,
   getManager, Brackets
 } from "typeorm";
 import { Equipment } from "../../db/entities/Equipment";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
 import { EquipmentModelService } from "../equipment_model/equipment.model.service";
-import { VideoCourse } from "../../db/entities/VideoCourse";
 
 type CustomQuery = {
   frequency_total_num_order?: "desc" | "asc"
