@@ -10,6 +10,7 @@ import { SysNotificationService } from "../sys_notification/sys.notification.ser
 import { PainQuestionService } from "../pain_question/pain.question.service";
 import { PainReplyService } from "../pain_reply/pain.reply.service";
 import { PrescriptionService } from "../prescription/prescription.service";
+import { CourseChartService } from "../course_chart/course.chart.service";
 import { Notification } from "../../db/entities/Notification";
 import { UserInfo } from "../../db/entities/UserInfo";
 import stringRandom from "string-random";
@@ -29,7 +30,9 @@ export class UserService {
     @Inject(forwardRef(() => PainReplyService))
     private readonly painReplyService: PainReplyService,
     @Inject(forwardRef(() => PrescriptionService))
-    private readonly prescriptionService: PrescriptionService
+    private readonly prescriptionService: PrescriptionService,
+    @Inject(forwardRef(() => CourseChartService))
+    private readonly courseChartService: CourseChartService
   ) {
   }
 

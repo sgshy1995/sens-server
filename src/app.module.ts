@@ -42,6 +42,8 @@ import { VideoCourseModule } from "./app/video_course/video.course.module";
 import { CourseInVideoModule } from "./app/course_in_video/course.in.video.module";
 import { EquipmentModule } from "./app/equipment/equipment.module";
 import { EquipmentModelModule } from "./app/equipment_model/equipment.model.module";
+import { CourseChartModule } from "./app/course_chart/course.chart.module";
+import { EquipmentChartModule } from "./app/equipment_chart/equipment.chart.module";
 
 @Module({
   imports: [
@@ -74,7 +76,9 @@ import { EquipmentModelModule } from "./app/equipment_model/equipment.model.modu
     VideoCourseModule,
     CourseInVideoModule,
     EquipmentModule,
-    EquipmentModelModule
+    EquipmentModelModule,
+    CourseChartModule,
+    EquipmentChartModule
   ],
   controllers: [AppController, UserController],
   providers: [

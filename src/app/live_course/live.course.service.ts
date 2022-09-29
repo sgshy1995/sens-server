@@ -13,6 +13,7 @@ import {
 import { LiveCourse } from "../../db/entities/LiveCourse";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
 import { VideoCourseService } from "../video_course/video.course.service";
+import { CourseChartService } from "../course_chart/course.chart.service";
 
 type CustomQuery = {
   frequency_num_order?: "desc" | "asc"
@@ -26,7 +27,9 @@ export class LiveCourseService {
   constructor(
     @InjectRepository(LiveCourse) private readonly liveCourseRepo: Repository<LiveCourse>,
     @Inject(forwardRef(() => VideoCourseService))
-    private readonly videoCourseService: VideoCourseService
+    private readonly videoCourseService: VideoCourseService,
+    @Inject(forwardRef(() => CourseChartService))
+    private readonly courseChartService: CourseChartService
   ) {
   }
 

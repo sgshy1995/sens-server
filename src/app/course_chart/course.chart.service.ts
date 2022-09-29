@@ -1,42 +1,54 @@
 import { forwardRef, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, FindOptionsSelect, FindOptionsWhere, Like, getRepository, Between, MoreThan } from "typeorm";
-import { CourseInVideo } from "../../db/entities/CourseInVideo";
+import { CourseChart } from "../../db/entities/CourseChart";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
 import { VideoCourseService } from "../video_course/video.course.service";
+import { LiveCourseService } from "../live_course/live.course.service";
 
 @Injectable()
-export class CourseInVideoService {
+export class CourseChartService {
   constructor(
-    @InjectRepository(CourseInVideo) private readonly courseInVideoRepo: Repository<CourseInVideo>,
+    @InjectRepository(CourseChart) private readonly courseChartRepo: Repository<CourseChart>,
     @Inject(forwardRef(() => VideoCourseService))
-    private readonly videoCourseService: VideoCourseService
+    private readonly videoCourseService: VideoCourseService,
+    @Inject(forwardRef(() => LiveCourseService))
+    private readonly liveCourseService: LiveCourseService
   ) {
   }
 
   /**
-   * 创建视频
-   * @param courseInVideo courseInVideo 实体对象
+   * 添加购物车
+   * @param courseChart courseChart 实体对象
    */
-  async createCourseInVideo(courseInVideo: CourseInVideo): Promise<ResponseResult> {
+  async createCourseChart(courseChart: CourseChart): Promise<ResponseResult> {
     let responseBody = { code: HttpStatus.OK, message: "创建成功" };
     // 插入数据时，删除 id，以避免请求体内传入 id
-    courseInVideo.id !== null && courseInVideo.id !== undefined && delete courseInVideo.id;
-    // 校验视频课
-    const videoCourseFind = await this.videoCourseService.findOneById(courseInVideo.course_id);
-    if (!videoCourseFind) {
+    courseChart.id !== null && courseChart.id !== undefined && delete courseChart.id;
+    // 校验数据是否已存在
+    const courseChartHistoryFind = await this.courseChartRepo.findOne({
+      where: {
+        user_id: courseChart.user_id,
+        course_id: courseChart.course_id,
+        status: 1
+      }
+    });
+    if (courseChartHistoryFind) {
       return {
-        code: HttpStatus.NOT_FOUND,
-        message: "视频课程主体无效"
+        code: HttpStatus.CONFLICT,
+        message: "该课程已在购物车中，请勿重复添加"
       };
-    }
-    // 发布时间
-    courseInVideo.publish_time = courseInVideo.status === 0 ? null : new Date();
-    await this.courseInVideoRepo.save(courseInVideo);
-    // 如果上线 更新视频数 +1
-    if(courseInVideo.status) {
-      videoCourseFind.video_num += 1;
-      await this.videoCourseService.updateVideoCourse(videoCourseFind);
+    } else {
+      const userReadyCreateList = await this.courseChartRepo.find({where: {user_id: courseChart.user_id}})
+      if (userReadyCreateList.length > 20){
+        return {
+          code: HttpStatus.CONFLICT,
+          message: "购物车最多放二十个课程~"
+        };
+      }
+      courseChart.add_num = 1;
+      courseChart.status = 1;
+      await this.courseChartRepo.save(courseChart);
     }
     return responseBody;
   }
@@ -44,34 +56,18 @@ export class CourseInVideoService {
   /**
    * 更新
    *
-   * @param courseInVideo courseInVideo 实体对象
+   * @param courseChart courseChart 实体对象
    */
-  async updateCourseInVideo(courseInVideo: CourseInVideo): Promise<ResponseResult> {
-    // 校验视频课
-    const videoCourseFind = await this.videoCourseService.findOneById(courseInVideo.course_id);
-    if (!videoCourseFind) {
+  async updateCourseChart(courseChart: CourseChart): Promise<ResponseResult> {
+    const courseChartFind = await this.courseChartRepo.findOne({ where: { id: courseChart.id } });
+    if (!courseChartFind) {
       return {
         code: HttpStatus.NOT_FOUND,
-        message: "视频课程主体无效"
+        message: "数据主体不存在"
       };
     }
-    const courseInVideoFind = await this.courseInVideoRepo.findOne({ where: { id: courseInVideo.id } });
-    if (courseInVideoFind.status === 0 && courseInVideo.status === 1) {
-      // 发布
-      courseInVideo.publish_time = new Date();
-      // 视频数加一
-      videoCourseFind.video_num += 1;
-      await this.videoCourseService.updateVideoCourse(videoCourseFind);
-    } else if (courseInVideoFind.status === 1 && courseInVideo.status === 0) {
-      // 下线 视频数减一，如果已经为0，则自动下架
-      videoCourseFind.video_num -= 1;
-      if (videoCourseFind.video_num === 0) {
-        videoCourseFind.status = 0;
-      }
-      await this.videoCourseService.updateVideoCourse(videoCourseFind);
-    }
-    const courseInVideoUpdate = Object.assign(courseInVideoFind, courseInVideo);
-    await this.courseInVideoRepo.update(courseInVideoUpdate.id, courseInVideoUpdate);
+    const courseChartUpdate = Object.assign(courseChartFind, courseChart);
+    await this.courseChartRepo.save(courseChartUpdate);
     return {
       code: HttpStatus.OK,
       message: "更新成功"
@@ -79,141 +75,67 @@ export class CourseInVideoService {
   }
 
   /**
-   * 根据 ids 批量更新状态
-   * @param ids ids
-   * @param course_id course_id
-   * @param status status
-   * @param select select conditions
+   * 删除
+   *
+   * @param id id 数据id
    */
-  public async updateManyStatusByIds(ids: string[], course_id: string, status: number, select?: FindOptionsSelect<CourseInVideo>): Promise<ResponseResult> {
-    const courseInVideosFind = await getRepository(CourseInVideo)
-      .createQueryBuilder("courseInVideo")
-      .select()
-      .where("courseInVideo.id IN (:...ids)", { ids })
-      .orderBy("courseInVideo.updated_at", "DESC")
-      .getMany();
-    // 校验所有的视频的课程id是否一致且正确
-    const errorOneFind = courseInVideosFind.find(item => item.course_id !== course_id);
-    if (!errorOneFind) {
-      return {
-        code: HttpStatus.BAD_REQUEST,
-        message: "视频课程主体id不一致"
-      };
-    }
-    // 校验视频课
-    const videoCourseFind = await this.videoCourseService.findOneById(course_id);
-    if (!videoCourseFind) {
+  async deleteCourseChart(id: string): Promise<ResponseResult> {
+    const courseChartFind = await this.courseChartRepo.findOne({ where: { id } });
+    if (!courseChartFind) {
       return {
         code: HttpStatus.NOT_FOUND,
-        message: "视频课程主体无效"
+        message: "数据主体不存在"
       };
     }
-    for (let i = 0; i < courseInVideosFind.length; i++) {
-      if (courseInVideosFind[i].status === 0 && status === 1) {
-        // 发布
-        courseInVideosFind[i].publish_time = new Date();
-      } else if (courseInVideosFind[i].status === 1 && status === 0) {
-        // 下线
-        courseInVideosFind[i].publish_time = null;
-      }
-      courseInVideosFind[i].status = status;
-      await this.courseInVideoRepo.update(courseInVideosFind[i].id, courseInVideosFind[i]);
+    await this.courseChartRepo.remove(courseChartFind);
+    return {
+      code: HttpStatus.OK,
+      message: "删除成功"
+    };
+  }
+
+  /**
+   * 删除多个
+   *
+   * @param user_id user_id 用户id
+   */
+  async deleteCourseCharts(user_id: string): Promise<ResponseResult> {
+    const courseChartsFind = await this.courseChartRepo.find({ where: { user_id } });
+    await this.courseChartRepo.remove(courseChartsFind);
+    return {
+      code: HttpStatus.OK,
+      message: "删除成功"
+    };
+  }
+
+  /**
+   * 根据用户id，查询多个购物车信息
+   * @param user_id user_id
+   */
+  async findManyCourseChartsByUserId(user_id: string): Promise<ResponseResult> {
+    const courseChartsFind = await this.findManyByUserId(user_id, {
+      id: true,
+      user_id: true,
+      course_id: true,
+      add_course_type: true,
+      add_num: true,
+      status: true,
+      created_at: true,
+      updated_at: true
+    });
+    for (let i = 0; i < courseChartsFind.length; i++) {
+      const courseFind = courseChartsFind[i].add_course_type === 1 ? await this.liveCourseService.findOneById(courseChartsFind[i].course_id) : await this.videoCourseService.findOneById(courseChartsFind[i].course_id);
+      Object.defineProperty(courseChartsFind[i], "course_info", {
+        value: courseFind,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
     }
-    // 视频数变化 若为0则自动下架
-    status ? videoCourseFind.video_num += courseInVideosFind.length : videoCourseFind.video_num -= courseInVideosFind.length;
-    if (videoCourseFind.video_num === 0) {
-      videoCourseFind.status = 0;
-    }
-    await this.videoCourseService.updateVideoCourse(videoCourseFind);
-    return {
-      code: HttpStatus.OK,
-      message: "更新成功"
-    };
-  }
-
-  /**
-   * 查询所有的课程
-   */
-  async findAllCourseInVideos(): Promise<ResponseResult> {
-    const courseInVideosFind = await this.findAll({
-      id: true,
-      course_id: true,
-      title: true,
-      cover: true,
-      description: true,
-      source: true,
-      time_length: true,
-      sort: true,
-      publish_time: true,
-      status: true,
-      created_at: true,
-      updated_at: true
-    });
     return {
       code: HttpStatus.OK,
       message: "查询成功",
-      data: courseInVideosFind
-    };
-  }
-
-  /**
-   * 查询多个视频
-   * @param custom custom find options
-   * @param query custom find query
-   */
-
-  async findManyCourseInVideos(custom: FindOptionsWhere<CourseInVideo>, query: PaginationQuery): Promise<ResponsePaginationResult> {
-    const [courseInVideosFind, totalCount] = await this.findMany(custom, query, {
-      id: true,
-      course_id: true,
-      title: true,
-      cover: true,
-      description: true,
-      source: true,
-      time_length: true,
-      sort: true,
-      publish_time: true,
-      status: true,
-      created_at: true,
-      updated_at: true
-    });
-    return {
-      code: HttpStatus.OK,
-      message: "查询成功",
-      data: {
-        data: courseInVideosFind,
-        pageSize: query.pageSize,
-        pageNo: query.pageNo,
-        totalCount: totalCount,
-        totalPage: Math.ceil(totalCount / query.pageSize)
-      }
-    };
-  }
-
-  /**
-   * 根据课程id，查询多个视频
-   * @param course_id course_id
-   */
-
-  async findManyCourseInVideosByCourseId(course_id: string): Promise<ResponseResult> {
-    const courseInVideosFind = await this.findManyByCourseId(course_id, {
-      id: true,
-      course_id: true,
-      title: true,
-      cover: true,
-      description: true,
-      source: true,
-      time_length: true,
-      sort: true,
-      publish_time: true,
-      status: true,
-      created_at: true,
-      updated_at: true
-    });
-    return {
-      code: HttpStatus.OK,
-      message: "查询成功",
-      data: courseInVideosFind
+      data: courseChartsFind
     };
   }
 
@@ -222,26 +144,22 @@ export class CourseInVideoService {
    *
    * @param id id
    */
-  async findOneCourseInVideoById(id: string): Promise<ResponseResult> {
-    const CourseInVideoFind = await this.findOneById(id, {
+  async findOneCourseChartById(id: string): Promise<ResponseResult> {
+    const courseChartFind = await this.findOneById(id, {
       id: true,
+      user_id: true,
       course_id: true,
-      title: true,
-      cover: true,
-      description: true,
-      source: true,
-      time_length: true,
-      sort: true,
-      publish_time: true,
+      add_course_type: true,
+      add_num: true,
       status: true,
       created_at: true,
       updated_at: true
     });
-    return CourseInVideoFind ?
+    return courseChartFind ?
       {
         code: HttpStatus.OK,
         message: "查询成功",
-        data: CourseInVideoFind
+        data: courseChartFind
       } : {
         code: HttpStatus.NOT_FOUND,
         message: "记录不存在"
@@ -253,58 +171,22 @@ export class CourseInVideoService {
    * @param id id
    * @param select select conditions
    */
-  public async findOneById(id: string, select?: FindOptionsSelect<CourseInVideo>): Promise<CourseInVideo | undefined> {
-    return await this.courseInVideoRepo.findOne({ where: { id }, select });
+  public async findOneById(id: string, select?: FindOptionsSelect<CourseChart>): Promise<CourseChart | undefined> {
+    return await this.courseChartRepo.findOne({ where: { id }, select });
   }
 
   /**
-   * 查询多个视频
-   * @param custom custom find conditions
-   * @param query custom find query
+   * 根据用户id，查询多个购物车
+   * @param user_id user_id
    * @param select select conditions
    */
-  public async findMany(custom: FindOptionsWhere<CourseInVideo>, query: PaginationQuery, select?: FindOptionsSelect<CourseInVideo>): Promise<[CourseInVideo[], number]> {
-    const take = query.pageSize || 8;
-    const page = query.pageNo || 1;
-    const skip = (page - 1) * take;
-    if (custom.title) {
-      custom.title = Like(`%${custom.title}%`);
-    }
-    return await this.courseInVideoRepo.findAndCount({
+  public async findManyByUserId(user_id: string, select?: FindOptionsSelect<CourseChart>): Promise<CourseChart[]> {
+    return await this.courseChartRepo.find({
       where: {
-        ...custom
-      },
-      order: { updated_at: "desc" },
-      take,
-      skip,
-      select
-    });
-  }
-
-  /**
-   * 根据课程id，查询多个视频
-   * @param course_id course_id
-   * @param select select conditions
-   */
-  public async findManyByCourseId(course_id: string, select?: FindOptionsSelect<CourseInVideo>): Promise<CourseInVideo[]> {
-    return await this.courseInVideoRepo.find({
-      where: {
-        course_id,
+        user_id,
         status: 1
       },
-      order: { sort: "asc" },
-      select
-    });
-  }
-
-  /**
-   * 查询所有视频
-   * @param select select conditions
-   */
-  public async findAll(select?: FindOptionsSelect<CourseInVideo>): Promise<CourseInVideo[] | undefined> {
-    return await this.courseInVideoRepo.find({
-      where: { status: 1 },
-      order: { updated_at: "asc" },
+      order: { updated_at: "desc" },
       select
     });
   }

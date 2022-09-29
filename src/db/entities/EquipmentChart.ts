@@ -1,7 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
 
-@Entity("course_charts")
-export class CourseChart {
+@Entity("equipment_charts")
+export class EquipmentChart {
 
   @PrimaryGeneratedColumn("uuid", { comment: "商品id" })
   id: string;
@@ -9,11 +9,11 @@ export class CourseChart {
   @Column("varchar", { comment: "用户id" })
   user_id: string;
 
-  @Column("varchar", { comment: "课程id" })
-  course_id: string;
+  @Column("varchar", { comment: "器材id" })
+  equipment_id: string;
 
-  @Column("int", { comment: "课程类型 1 直播课 0 视频课" })
-  add_course_type: number;
+  @Column("varchar", { comment: "型号id" })
+  equipment_model_id: string;
 
   @Column("int", { comment: "添加数量" })
   add_num: number;

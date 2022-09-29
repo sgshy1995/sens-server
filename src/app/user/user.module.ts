@@ -10,6 +10,7 @@ import { SysNotificationModule } from "../sys_notification/sys.notification.modu
 import { PainQuestionModule } from "../pain_question/pain.question.module";
 import { PainReplyModule } from "../pain_reply/pain.reply.module";
 import { PrescriptionModule } from "../prescription/prescription.module";
+import { CourseChartModule } from "../course_chart/course.chart.module";
 
 @Module({
   imports: [
@@ -19,7 +20,8 @@ import { PrescriptionModule } from "../prescription/prescription.module";
     forwardRef(() => SysNotificationModule),
     forwardRef(() => PainQuestionModule),
     forwardRef(() => PainReplyModule),
-    forwardRef(() => PrescriptionModule)
+    forwardRef(() => PrescriptionModule),
+    forwardRef(() => CourseChartModule)
   ],
   //controllers: [UserController],
   providers: [UserService],

@@ -10,7 +10,7 @@ export class ErrorsInterceptor implements NestInterceptor {
             if (error instanceof HttpException) {
                 return Promise.reject({
                     code: error.getStatus(),
-                    message: error.getResponse()
+                    message: error.message
                 });
             }
             return Promise.reject({

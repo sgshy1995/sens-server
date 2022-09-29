@@ -4,6 +4,7 @@ import { Repository, FindOptionsSelect, FindOptionsWhere, Like, getRepository, B
 import { EquipmentModel } from "../../db/entities/EquipmentModel";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
 import { EquipmentService } from "../equipment/equipment.service";
+import { EquipmentChartService } from "../equipment_chart/equipment.chart.service";
 
 type CustomQuery = {
   frequency_num_order?: "desc" | "asc"
@@ -16,6 +17,8 @@ export class EquipmentModelService {
     @InjectRepository(EquipmentModel) private readonly equipmentModelRepo: Repository<EquipmentModel>,
     @Inject(forwardRef(() => EquipmentService))
     private readonly equipmentService: EquipmentService,
+    @Inject(forwardRef(() => EquipmentChartService))
+    private readonly equipmentChartService: EquipmentChartService
   ) {
   }
 

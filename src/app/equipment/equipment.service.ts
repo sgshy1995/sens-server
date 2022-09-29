@@ -11,6 +11,7 @@ import {
 import { Equipment } from "../../db/entities/Equipment";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
 import { EquipmentModelService } from "../equipment_model/equipment.model.service";
+import { EquipmentChartService } from "../equipment_chart/equipment.chart.service";
 
 type CustomQuery = {
   frequency_total_num_order?: "desc" | "asc"
@@ -22,7 +23,9 @@ export class EquipmentService {
   constructor(
     @InjectRepository(Equipment) private readonly equipmentRepo: Repository<Equipment>,
     @Inject(forwardRef(() => EquipmentModelService))
-    private readonly equipmentModelService: EquipmentModelService
+    private readonly equipmentModelService: EquipmentModelService,
+    @Inject(forwardRef(() => EquipmentChartService))
+    private readonly equipmentChartService: EquipmentChartService
   ) {
   }
 

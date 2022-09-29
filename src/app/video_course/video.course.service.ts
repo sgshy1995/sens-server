@@ -6,6 +6,7 @@ import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../..
 import { CourseInVideoService } from "../course_in_video/course.in.video.service";
 import { LiveCourseService } from "../live_course/live.course.service";
 import { LiveCourse } from "../../db/entities/LiveCourse";
+import { CourseChartService } from "../course_chart/course.chart.service";
 
 type CustomQuery = {
   frequency_num_order?: "desc" | "asc"
@@ -21,7 +22,9 @@ export class VideoCourseService {
     @Inject(forwardRef(() => CourseInVideoService))
     private readonly courseInVideoService: CourseInVideoService,
     @Inject(forwardRef(() => LiveCourseService))
-    private readonly liveCourseService: LiveCourseService
+    private readonly liveCourseService: LiveCourseService,
+    @Inject(forwardRef(() => CourseChartService))
+    private readonly courseChartService: CourseChartService
   ) {
   }
 
