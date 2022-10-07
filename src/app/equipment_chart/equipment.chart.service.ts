@@ -93,7 +93,11 @@ export class EquipmentChartService {
       };
     }
     type === "add" ? equipmentChartFind.add_num += 1 : equipmentChartFind.add_num -= 1;
-    await this.equipmentChartRepo.update(equipmentChartFind.id, equipmentChartFind);
+    if (equipmentChartFind.add_num === 0){
+      await this.equipmentChartRepo.remove(equipmentChartFind);
+    }else{
+      await this.equipmentChartRepo.update(equipmentChartFind.id, equipmentChartFind);
+    }
     return {
       code: HttpStatus.OK,
       message: "更新成功"
