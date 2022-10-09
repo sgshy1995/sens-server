@@ -43,6 +43,26 @@ export class UserInfoService {
   }
 
   /**
+   * 账户充值
+   *
+   * @param user_id user_id
+   * @param balance balance 金额
+   */
+  async addBalanceByUserId(user_id: string, balance: string): Promise<ResponseResult> {
+    const infoFind = await this.userInfoRepo.findOne({
+      where: {
+        user_id
+      }
+    })
+    infoFind.balance = (Number(infoFind.balance) + Number(balance)).toFixed(2)
+    await this.userInfoRepo.update(infoFind.id, infoFind)
+    return {
+      code: HttpStatus.OK,
+      message: '账户充值成功'
+    }
+  }
+
+  /**
    * 根据 user_id 查询
    *
    * @param user_id user_id

@@ -58,7 +58,7 @@ export class UserInfoController {
   }))
   async uploadFileBackground(@UploadedFile() file, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
     console.log(file);
-    console.log(request.user)
+    console.log(request.user);
     const res = {
       code: HttpStatus.OK,
       message: "上传成功",
@@ -69,16 +69,16 @@ export class UserInfoController {
   }
 
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
-  @UseGuards(AuthGuard('jwt')) // 使用 'JWT' 进行验证
+  @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Get("user")
-  async findOneUserByJWT(@Res({passthrough: true}) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
+  async findOneUserByJWT(@Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
     const jwtUser = request.user;
     const res = !request.headers.authorization ? {
       code: HttpStatus.UNAUTHORIZED,
-      message: '未认证，请登录'
+      message: "未认证，请登录"
     } : (jwtUser && jwtUser.username) ? await this.userInfoService.findOneInfoById(jwtUser.id) : {
       code: HttpStatus.NOT_FOUND,
-      message: '登录已过期，请重新登录'
+      message: "登录已过期，请重新登录"
     };
     response.status(res.code);
     return res;
@@ -98,6 +98,17 @@ export class UserInfoController {
   @Put("user/:user_id")
   async updateInfo(@Param("user_id") user_id: string, @Body() info: UserInfo, @Res({ passthrough: true }) response: Response): Promise<ResponseResult> {
     const res = await this.userInfoService.updateInfoByUserId(user_id, info);
+    response.status(res.code);
+    return res;
+  }
+
+  @UseGuards(new TokenGuard()) // 使用 token redis 验证
+  @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
+  @Put("balance/add")
+  async addBalanceByUserId(@Body() info: { balance: string }, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<ResponseResult> {
+    const { balance } = info;
+    const user_id = request.user.id;
+    const res = await this.userInfoService.addBalanceByUserId(user_id, balance);
     response.status(res.code);
     return res;
   }

@@ -71,7 +71,7 @@ export class UserService {
       const userInfo = new UserInfo();
       userInfo.user_id = user.id;
       userInfo.integral = 0;
-      userInfo.balance = "0";
+      userInfo.balance = "0.00";
       userInfo.status = 1;
       await this.userInfoService.createInfo(userInfo);
     }
