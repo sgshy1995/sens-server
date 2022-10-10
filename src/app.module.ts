@@ -44,6 +44,8 @@ import { EquipmentModule } from "./app/equipment/equipment.module";
 import { EquipmentModelModule } from "./app/equipment_model/equipment.model.module";
 import { CourseChartModule } from "./app/course_chart/course.chart.module";
 import { EquipmentChartModule } from "./app/equipment_chart/equipment.chart.module";
+import { CourseOrderModule } from "./app/course_order/course.order.module";
+import { TopUpOrderModule } from "./app/top_up_order/top.up.order.module";
 
 @Module({
   imports: [
@@ -78,7 +80,9 @@ import { EquipmentChartModule } from "./app/equipment_chart/equipment.chart.modu
     EquipmentModule,
     EquipmentModelModule,
     CourseChartModule,
-    EquipmentChartModule
+    EquipmentChartModule,
+    CourseOrderModule,
+    TopUpOrderModule
   ],
   controllers: [AppController, UserController],
   providers: [

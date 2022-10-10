@@ -105,10 +105,10 @@ export class UserInfoController {
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Put("balance/add")
-  async addBalanceByUserId(@Body() info: { balance: string }, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<ResponseResult> {
-    const { balance } = info;
+  async addBalanceByUserId(@Body() info: { balance: string, payment_type: number }, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<ResponseResult> {
+    const { balance, payment_type } = info;
     const user_id = request.user.id;
-    const res = await this.userInfoService.addBalanceByUserId(user_id, balance);
+    const res = await this.userInfoService.addBalanceByUserId(user_id, balance, payment_type);
     response.status(res.code);
     return res;
   }

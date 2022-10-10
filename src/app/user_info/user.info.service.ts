@@ -1,16 +1,26 @@
 import { forwardRef, HttpStatus, Inject, Injectable } from "@nestjs/common";
-import {InjectRepository} from '@nestjs/typeorm';
-import {Repository, FindOptionsSelect} from 'typeorm';
-import {UserInfo} from '../../db/entities/UserInfo';
-import {ResponseResult} from '../../types/result.interface';
-import {UserService} from "../user/user.service";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, FindOptionsSelect } from "typeorm";
+import { UserInfo } from "../../db/entities/UserInfo";
+import { ResponseResult } from "../../types/result.interface";
+import { UserService } from "../user/user.service";
+import { CourseOrderService } from "../course_order/course.order.service";
+import { TopUpOrderService } from "../top_up_order/top.up.order.service";
+import { TopUpOrder } from "../../db/entities/TopUpOrder";
+import moment = require("moment");
+import Chance = require("chance");
+const chance = new Chance();
 
 @Injectable()
 export class UserInfoService {
   constructor(
     @InjectRepository(UserInfo) private readonly userInfoRepo: Repository<UserInfo>,
     @Inject(forwardRef(() => UserService))
-    private readonly userService: UserService
+    private readonly userService: UserService,
+    @Inject(forwardRef(() => CourseOrderService))
+    private readonly courseOrderService: CourseOrderService,
+    @Inject(forwardRef(() => TopUpOrderService))
+    private readonly topUpOrderService: TopUpOrderService
   ) {
   }
 
@@ -19,8 +29,8 @@ export class UserInfoService {
    *
    * @param info Info 实体对象
    */
-  async createInfo(info: { [T in keyof UserInfo] : any }): Promise<void> {
-    await this.userInfoRepo.save(info)
+  async createInfo(info: { [T in keyof UserInfo]: any }): Promise<void> {
+    await this.userInfoRepo.save(info);
   }
 
   /**
@@ -34,12 +44,12 @@ export class UserInfoService {
       where: {
         user_id
       }
-    })
-    await this.userInfoRepo.update(infoFind.id, info)
+    });
+    await this.userInfoRepo.update(infoFind.id, info);
     return {
       code: HttpStatus.OK,
-      message: '更新成功'
-    }
+      message: "更新成功"
+    };
   }
 
   /**
@@ -47,19 +57,44 @@ export class UserInfoService {
    *
    * @param user_id user_id
    * @param balance balance 金额
+   * @param payment_type payment_type 支付类型 1 微信支付 2 支付宝支付 3 Apple支付
    */
-  async addBalanceByUserId(user_id: string, balance: string): Promise<ResponseResult> {
+  async addBalanceByUserId(user_id: string, balance: string, payment_type: number): Promise<ResponseResult> {
     const infoFind = await this.userInfoRepo.findOne({
       where: {
         user_id
       }
-    })
-    infoFind.balance = (Number(infoFind.balance) + Number(balance)).toFixed(2)
-    await this.userInfoRepo.update(infoFind.id, infoFind)
+    });
+    infoFind.balance = (Number(infoFind.balance) + Number(balance)).toFixed(2);
+    await this.userInfoRepo.update(infoFind.id, infoFind);
+    // 创建充值订单
+    const topUpOrder = new TopUpOrder()
+    // 订单号
+    topUpOrder.order_time = new Date()
+    topUpOrder.order_no = "218304" + moment(new Date(topUpOrder.order_time), "YYYYMMDDHHmmss").format("YYYYMMDDHHmmss") + chance.integer({
+      min: 22222222,
+      max: 99999999
+    }).toString();
+    // 支付流水号
+    topUpOrder.payment_time = new Date();
+    topUpOrder.payment_no = "618124" + moment(new Date(topUpOrder.payment_time), "YYYYMMDDHHmmss").format("YYYYMMDDHHmmss") + chance.integer({
+      min: 222222222222,
+      max: 999999999999
+    }).toString();
+    // 金额
+    topUpOrder.payment_num = balance;
+    // 支付类型
+    topUpOrder.payment_type = payment_type;
+    // 用户id
+    topUpOrder.user_id = user_id;
+    // 状态
+    topUpOrder.status = 2;
+    // 保存订单
+    await this.topUpOrderService.createTopUpOrder(topUpOrder);
     return {
       code: HttpStatus.OK,
-      message: '账户充值成功'
-    }
+      message: "账户充值成功"
+    };
   }
 
   /**
@@ -83,11 +118,11 @@ export class UserInfoService {
     return infoFind ?
       {
         code: HttpStatus.OK,
-        message: '查询成功',
+        message: "查询成功",
         data: infoFind
       } : {
         code: HttpStatus.NOT_FOUND,
-        message: '记录不存在'
+        message: "记录不存在"
       };
   }
 
@@ -97,7 +132,7 @@ export class UserInfoService {
    * @param select select conditions
    */
   public async findOneByUserId(user_id: string, select?: FindOptionsSelect<UserInfo>): Promise<UserInfo | undefined> {
-    return await this.userInfoRepo.findOne({where: {user_id}, select});
+    return await this.userInfoRepo.findOne({ where: { user_id }, select });
   }
 
 }
