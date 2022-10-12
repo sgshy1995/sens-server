@@ -1,6 +1,6 @@
 import { forwardRef, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, FindOptionsSelect, FindOptionsWhere, Like, getRepository, Between, MoreThan } from "typeorm";
+import { Repository, FindOptionsSelect, FindOptionsWhere, Like, getRepository, Between, MoreThan, In } from "typeorm";
 import { CourseChart } from "../../db/entities/CourseChart";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
 import { VideoCourseService } from "../video_course/video.course.service";
@@ -39,8 +39,8 @@ export class CourseChartService {
         message: "该课程已在购物车中，请勿重复添加"
       };
     } else {
-      const userReadyCreateList = await this.courseChartRepo.find({where: {user_id: courseChart.user_id}})
-      if (userReadyCreateList.length > 20){
+      const userReadyCreateList = await this.courseChartRepo.find({ where: { user_id: courseChart.user_id } });
+      if (userReadyCreateList.length > 20) {
         return {
           code: HttpStatus.CONFLICT,
           message: "购物车最多放二十个课程~"
@@ -88,6 +88,21 @@ export class CourseChartService {
       };
     }
     await this.courseChartRepo.remove(courseChartFind);
+    return {
+      code: HttpStatus.OK,
+      message: "删除成功"
+    };
+  }
+
+  /**
+   * 删除
+   *
+   * @param ids ids 数据id集合
+   */
+  async deleteCourseChartIds(ids: string): Promise<ResponseResult> {
+    const ids_list = ids.split(",");
+    const courseChartsFind = await this.courseChartRepo.find({ where: { id: In(ids_list) } });
+    await this.courseChartRepo.remove(courseChartsFind);
     return {
       code: HttpStatus.OK,
       message: "删除成功"

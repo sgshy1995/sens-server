@@ -9,14 +9,20 @@ export class CourseOrder {
   @Column("varchar", { comment: "用户id" })
   user_id: string;
 
-  @Column("text", { comment: "课程id集合 逗号隔开" })
-  course_ids: string;
+  @Column("text", { comment: "课程id" })
+  course_id: string;
 
-  @Column("varchar", { comment: "课程类型集合 1 直播课 0 视频课 逗号隔开" })
-  course_types: string;
+  @Column("int", { comment: "课程类型 1 直播课 0 视频课" })
+  course_type: number;
 
-  @Column("varchar", { comment: "购买价格集合 逗号隔开" })
-  order_prices: string;
+  @Column("varchar", { comment: "购买价格" })
+  order_price: string;
+
+  @Column("int", { comment: "购买排序" })
+  order_sort: number;
+
+  @Column("int", { comment: "购买总数" })
+  order_total: number;
 
   @Column("varchar", { comment: "订单号（28位）编号规则：系统ID（6位）+系统交易日期（8位：YYYYMMDD)+系统交易时间戳(6位：HHmmss)+订单序号（8位，保证当天唯一）" })
   order_no: string;

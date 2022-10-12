@@ -32,7 +32,7 @@ export class CourseOrderController {
   ) {
   }
 
-  @UseGuards(new TokenGuard()) // 使用 token redis 验证
+  /*@UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Post()
   async createCourseOrder(@Body() courseOrder: CourseOrder, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
@@ -40,7 +40,7 @@ export class CourseOrderController {
     const res = await this.courseOrderService.createCourseOrder(courseOrder);
     response.status(res.code);
     return res;
-  }
+  }*/
 
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证

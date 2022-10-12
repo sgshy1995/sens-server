@@ -4,11 +4,15 @@ import { Repository, FindOptionsSelect } from "typeorm";
 import { UserInfo } from "../../db/entities/UserInfo";
 import { ResponseResult } from "../../types/result.interface";
 import { UserService } from "../user/user.service";
+import { CourseOrder } from "../../db/entities/CourseOrder";
 import { CourseOrderService } from "../course_order/course.order.service";
+import { CourseChartService } from "../course_chart/course.chart.service";
+import { EquipmentChartService } from "../equipment_chart/equipment.chart.service";
 import { TopUpOrderService } from "../top_up_order/top.up.order.service";
 import { TopUpOrder } from "../../db/entities/TopUpOrder";
 import moment = require("moment");
 import Chance = require("chance");
+
 const chance = new Chance();
 
 @Injectable()
@@ -20,7 +24,11 @@ export class UserInfoService {
     @Inject(forwardRef(() => CourseOrderService))
     private readonly courseOrderService: CourseOrderService,
     @Inject(forwardRef(() => TopUpOrderService))
-    private readonly topUpOrderService: TopUpOrderService
+    private readonly topUpOrderService: TopUpOrderService,
+    @Inject(forwardRef(() => CourseChartService))
+    private readonly courseChartService: CourseChartService,
+    @Inject(forwardRef(() => EquipmentChartService))
+    private readonly equipmentChartService: EquipmentChartService
   ) {
   }
 
@@ -68,9 +76,9 @@ export class UserInfoService {
     infoFind.balance = (Number(infoFind.balance) + Number(balance)).toFixed(2);
     await this.userInfoRepo.update(infoFind.id, infoFind);
     // 创建充值订单
-    const topUpOrder = new TopUpOrder()
+    const topUpOrder = new TopUpOrder();
     // 订单号
-    topUpOrder.order_time = new Date()
+    topUpOrder.order_time = new Date();
     topUpOrder.order_no = "218304" + moment(new Date(topUpOrder.order_time), "YYYYMMDDHHmmss").format("YYYYMMDDHHmmss") + chance.integer({
       min: 22222222,
       max: 99999999
@@ -94,6 +102,31 @@ export class UserInfoService {
     return {
       code: HttpStatus.OK,
       message: "账户充值成功"
+    };
+  }
+
+  /**
+   * 购物车下单
+   *
+   * @param user_id user_id
+   * @param course_chart_ids 课程购物车id集合
+   * @param course_info 课程信息
+   * @param order_time 下单时间
+   * @param payment_type 下单支付类型
+   */
+  async addChartOrderByUserId(user_id: string, course_chart_ids: string, course_info: { course_ids: string, course_types: string, payment_num: string }, order_time: string, payment_type: number): Promise<ResponseResult> {
+    const infoFind = await this.userInfoRepo.findOne({
+      where: {
+        user_id
+      }
+    });
+    // 创建课程支付订单
+    const course_order_result = await this.courseOrderService.createCourseOrders(user_id, course_info.course_ids, course_info.course_types, course_info.payment_num, payment_type, order_time );
+    if (course_order_result.code !== HttpStatus.OK) return course_order_result;
+    await this.courseChartService.deleteCourseChartIds(course_chart_ids);
+    return {
+      code: HttpStatus.OK,
+      message: "下单成功"
     };
   }
 
