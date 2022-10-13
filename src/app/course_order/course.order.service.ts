@@ -72,7 +72,7 @@ export class CourseOrderService {
     // 校验用户余额是否充足
     const userInfo = await this.userInfoService.findOneByUserId(user_id);
     if (payment_type === 0) {
-      if (userInfo.balance < payment_num) {
+      if (Number(userInfo.balance) < Number(payment_num)) {
         return {
           code: HttpStatus.BAD_REQUEST,
           message: "用户余额不足，请充值后再试"

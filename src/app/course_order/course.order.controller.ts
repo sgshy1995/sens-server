@@ -44,7 +44,7 @@ export class CourseOrderController {
 
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
-  @Get()
+  @Get("user")
   async findManyCourseOrdersByUserId(@Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
     const user_id = request.user.id;
     const res = await this.courseOrderService.findManyCourseOrdersByUserId(user_id);

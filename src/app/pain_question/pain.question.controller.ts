@@ -92,9 +92,9 @@ export class PainQuestionController {
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Get("custom")
   async findManyPainQuestions(@Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
-    const query = {...request.query}
-    const keyword:string = query.keyword.toString()
-    if (query.hasOwnProperty('keyword')) delete query.keyword
+    const query = { ...request.query };
+    const keyword: string = query.keyword ? query.keyword.toString() : "";
+    if (query.hasOwnProperty("keyword")) delete query.keyword;
     const res = await this.painQuestionService.findManyPainQuestions(query, keyword);
     response.status(res.code);
     return res;
