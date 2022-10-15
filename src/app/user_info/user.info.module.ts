@@ -9,6 +9,7 @@ import { CourseOrderModule } from "../course_order/course.order.module";
 import { CourseChartModule } from "../course_chart/course.chart.module";
 import { EquipmentChartModule } from "../equipment_chart/equipment.chart.module";
 import { TopUpOrderModule } from "../top_up_order/top.up.order.module";
+import { AddressModule } from "../address/address.module";
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { TopUpOrderModule } from "../top_up_order/top.up.order.module";
     forwardRef(() => CourseOrderModule),
     forwardRef(() => TopUpOrderModule),
     forwardRef(() => CourseChartModule),
-    forwardRef(() => EquipmentChartModule)
+    forwardRef(() => EquipmentChartModule),
+    forwardRef(() => AddressModule)
   ],
   controllers: [UserInfoController],
   providers: [UserInfoService],

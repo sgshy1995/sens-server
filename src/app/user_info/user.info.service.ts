@@ -10,8 +10,10 @@ import { CourseChartService } from "../course_chart/course.chart.service";
 import { EquipmentChartService } from "../equipment_chart/equipment.chart.service";
 import { TopUpOrderService } from "../top_up_order/top.up.order.service";
 import { TopUpOrder } from "../../db/entities/TopUpOrder";
+import { AddressService } from "../address/address.service";
 import moment = require("moment");
 import Chance = require("chance");
+import { Address } from "../../db/entities/Address";
 
 const chance = new Chance();
 
@@ -28,7 +30,9 @@ export class UserInfoService {
     @Inject(forwardRef(() => CourseChartService))
     private readonly courseChartService: CourseChartService,
     @Inject(forwardRef(() => EquipmentChartService))
-    private readonly equipmentChartService: EquipmentChartService
+    private readonly equipmentChartService: EquipmentChartService,
+    @Inject(forwardRef(() => AddressService))
+    private readonly addressService: AddressService
   ) {
   }
 
@@ -53,7 +57,8 @@ export class UserInfoService {
         user_id
       }
     });
-    await this.userInfoRepo.update(infoFind.id, info);
+    const infoFindUpdate = Object.assign(infoFind, info);
+    await this.userInfoRepo.update(infoFindUpdate.id, infoFindUpdate);
     return {
       code: HttpStatus.OK,
       message: "更新成功"
@@ -146,17 +151,29 @@ export class UserInfoService {
       injury_recent: true,
       discharge_abstract: true,
       image_data: true,
+      default_address_id: true,
       status: true
     });
-    return infoFind ?
-      {
-        code: HttpStatus.OK,
-        message: "查询成功",
-        data: infoFind
-      } : {
+    if (!infoFind){
+      return {
         code: HttpStatus.NOT_FOUND,
         message: "记录不存在"
-      };
+      }
+    }
+    if (infoFind.default_address_id){
+      const address = await this.addressService.findOneById(infoFind.default_address_id);
+      Object.defineProperty(infoFind, 'default_address_info', {
+        value: address ? address : new Address(),
+        writable: true,
+        enumerable: true,
+        configurable: true
+      })
+    }
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: infoFind
+    };
   }
 
   /**

@@ -30,6 +30,9 @@ export class UserInfo {
   @Column("text", { comment: "影像资料", nullable: true })
   image_data?: string;
 
+  @Column("varchar", { comment: "默认地址id", nullable: true })
+  default_address_id?: string;
+
   @Column("int", { comment: "信息状态" })
   status: number;
 

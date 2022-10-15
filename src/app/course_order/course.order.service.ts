@@ -208,6 +208,89 @@ export class CourseOrderService {
   }
 
   /**
+   * 根据订单号，查询多个订单信息，并整合为一个
+   * @param order_no order_no
+   */
+  async findManyCourseOrdersByOrderNoToOne(order_no: string): Promise<ResponseResult> {
+    const courseOrdersFind = await this.findManyByOrderNo(order_no, {
+      id: true,
+      user_id: true,
+      course_id: true,
+      course_type: true,
+      order_price: true,
+      order_sort: true,
+      order_total: true,
+      order_no: true,
+      order_time: true,
+      payment_no: true,
+      payment_type: true,
+      payment_time: true,
+      payment_num: true,
+      status: true,
+      created_at: true,
+      updated_at: true
+    });
+    if (!courseOrdersFind.length){
+      return {
+        code: HttpStatus.NOT_FOUND,
+        message: "订单号不存在"
+      };
+    }
+    // TODO 双层 for 循环，如果缓慢考虑后期优化
+    const courseOrder = {
+      order_no: order_no,
+      payment_no: courseOrdersFind[0].payment_no,
+      payment_type: courseOrdersFind[0].payment_type,
+      payment_time: courseOrdersFind[0].payment_time,
+      payment_num: courseOrdersFind[0].payment_num,
+      status: courseOrdersFind[0].status,
+      user_id: courseOrdersFind[0].user_id,
+      order_total: courseOrdersFind[0].order_total,
+      course_infos: [],
+      order_list: courseOrdersFind
+    }
+    for (let j = 0; j < courseOrdersFind.length; j++) {
+      const courseFind = courseOrdersFind[j].course_type === 1 ? await this.liveCourseService.findOneById(courseOrdersFind[j].course_id) : await this.videoCourseService.findOneById(courseOrdersFind[j].course_id)
+      courseOrder.course_infos.push(courseFind)
+    }
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: courseOrder
+    };
+  }
+
+  /**
+   * 根据订单号，查询多个订单信息
+   * @param order_no order_no
+   */
+  async findManyCourseOrdersByOrder(order_no: string): Promise<ResponseResult> {
+    const courseOrdersFind = await this.findManyByOrderNo(order_no, {
+      id: true,
+      user_id: true,
+      course_id: true,
+      course_type: true,
+      order_price: true,
+      order_sort: true,
+      order_total: true,
+      order_no: true,
+      order_time: true,
+      payment_no: true,
+      payment_type: true,
+      payment_time: true,
+      payment_num: true,
+      status: true,
+      created_at: true,
+      updated_at: true
+    });
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: courseOrdersFind
+    };
+  }
+
+  /**
    * 根据 id 查询
    *
    * @param id id
@@ -259,8 +342,22 @@ export class CourseOrderService {
   public async findManyByUserId(user_id: string, select?: FindOptionsSelect<CourseOrder>): Promise<CourseOrder[]> {
     return await this.courseOrderRepo.find({
       where: {
-        user_id,
-        status: 2
+        user_id
+      },
+      order: { updated_at: "desc" },
+      select
+    });
+  }
+
+  /**
+   * 根据订单号，查询多个订单
+   * @param order_no order_no
+   * @param select select conditions
+   */
+  public async findManyByOrderNo(order_no: string, select?: FindOptionsSelect<CourseOrder>): Promise<CourseOrder[]> {
+    return await this.courseOrderRepo.find({
+      where: {
+        order_no
       },
       order: { updated_at: "desc" },
       select

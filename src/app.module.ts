@@ -46,6 +46,7 @@ import { CourseChartModule } from "./app/course_chart/course.chart.module";
 import { EquipmentChartModule } from "./app/equipment_chart/equipment.chart.module";
 import { CourseOrderModule } from "./app/course_order/course.order.module";
 import { TopUpOrderModule } from "./app/top_up_order/top.up.order.module";
+import { AddressModule } from "./app/address/address.module";
 
 @Module({
   imports: [
@@ -82,7 +83,8 @@ import { TopUpOrderModule } from "./app/top_up_order/top.up.order.module";
     CourseChartModule,
     EquipmentChartModule,
     CourseOrderModule,
-    TopUpOrderModule
+    TopUpOrderModule,
+    AddressModule
   ],
   controllers: [AppController, UserController],
   providers: [
