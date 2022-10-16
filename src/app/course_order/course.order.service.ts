@@ -122,11 +122,19 @@ export class CourseOrderService {
     });
     // 保存
     await this.courseOrderRepo.save(courseOrdersList);
+    // 课程增加购买次数
+    for (let i = 0; i < courses.length; i++) {
+      courses[i].frequency_num += 1
+      // @ts-ignore
+      course_types[i] === 1 ? await this.liveCourseService.updateLiveCourse(courses[i]) : await this.videoCourseService.updateVideoCourse(courses[i]);
+    }
     // 扣款
     if (payment_type === 0) {
       userInfo.balance = (Number(userInfo.balance) - Number(payment_num)).toString();
-      await this.userInfoService.updateInfoByUserId(user_id, userInfo);
     }
+    // 增加积分
+    userInfo.integral += Number(payment_num);
+    await this.userInfoService.updateInfoByUserId(user_id, userInfo);
     // 返回结果
     return responseBody;
   }
@@ -239,6 +247,7 @@ export class CourseOrderService {
     // TODO 双层 for 循环，如果缓慢考虑后期优化
     const courseOrder = {
       order_no: order_no,
+      order_time: courseOrdersFind[0].order_time,
       payment_no: courseOrdersFind[0].payment_no,
       payment_type: courseOrdersFind[0].payment_type,
       payment_time: courseOrdersFind[0].payment_time,
@@ -251,7 +260,11 @@ export class CourseOrderService {
     }
     for (let j = 0; j < courseOrdersFind.length; j++) {
       const courseFind = courseOrdersFind[j].course_type === 1 ? await this.liveCourseService.findOneById(courseOrdersFind[j].course_id) : await this.videoCourseService.findOneById(courseOrdersFind[j].course_id)
-      courseOrder.course_infos.push(courseFind)
+      const course_order = {
+        ...courseFind,
+        order_price: courseOrdersFind[j].order_price
+      }
+      courseOrder.course_infos.push(course_order)
     }
     return {
       code: HttpStatus.OK,
