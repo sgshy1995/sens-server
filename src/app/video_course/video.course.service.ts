@@ -1,6 +1,17 @@
 import { forwardRef, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, FindOptionsSelect, FindOptionsWhere, Like, getRepository, Between, MoreThan, getManager, Brackets } from "typeorm";
+import {
+  Repository,
+  FindOptionsSelect,
+  FindOptionsWhere,
+  Like,
+  getRepository,
+  Between,
+  MoreThan,
+  getManager,
+  Brackets,
+  In
+} from "typeorm";
 import { VideoCourse } from "../../db/entities/VideoCourse";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
 import { CourseInVideoService } from "../course_in_video/course.in.video.service";
@@ -233,6 +244,36 @@ export class VideoCourseService {
   }
 
   /**
+   * 查询多个id查询多个视频课
+   * @param ids ids id集合
+   */
+  async findManyVideoCoursesByIds(ids: string): Promise<ResponseResult> {
+    const videoCoursesFind = await this.findManyByIds(ids, {
+      id: true,
+      title: true,
+      cover: true,
+      description: true,
+      course_type: true,
+      video_num: true,
+      frequency_num: true,
+      price: true,
+      is_discount: true,
+      discount: true,
+      discount_validity: true,
+      carousel: true,
+      publish_time: true,
+      status: true,
+      created_at: true,
+      updated_at: true
+    });
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: videoCoursesFind
+    };
+  }
+
+  /**
    * 根据 id 查询
    *
    * @param id id
@@ -324,9 +365,9 @@ export class VideoCourseService {
       skip,
       select
     });*/
-    if (custom_query_in.keyword){
-      custom.hasOwnProperty('description') && delete custom.description
-      custom.hasOwnProperty('title') && delete custom.title
+    if (custom_query_in.keyword) {
+      custom.hasOwnProperty("description") && delete custom.description;
+      custom.hasOwnProperty("title") && delete custom.title;
     }
     const customIn = {
       ...custom,
@@ -336,17 +377,17 @@ export class VideoCourseService {
       price: ["0", "1", "2", "3", "4"].includes(custom_query_in.price_range) ?
         Between.apply(null, price_map[custom_query_in.price_range]) :
         custom_query_in.price_range === "5" ? MoreThan(price_map["5"]) : custom.price
-    }
-    Object.keys(customIn).map(key=>{
-      if (customIn[key] === undefined) delete customIn[key]
-    })
-    const videoCourses = await getManager().createQueryBuilder(VideoCourse,'video_course')
-      .groupBy('video_course.id')
-      .select(Object.keys(select).map(key=>`video_course.${key}`))
+    };
+    Object.keys(customIn).map(key => {
+      if (customIn[key] === undefined) delete customIn[key];
+    });
+    const videoCourses = await getManager().createQueryBuilder(VideoCourse, "video_course")
+      .groupBy("video_course.id")
+      .select(Object.keys(select).map(key => `video_course.${key}`))
       .where(customIn)
       .andWhere(new Brackets(qb => {
-        qb.where('video_course.description LIKE :description', { description: `%${custom_query_in.keyword || ''}%` })
-          .orWhere('video_course.title LIKE :title', { title: `%${custom_query_in.keyword || ''}%` })
+        qb.where("video_course.description LIKE :description", { description: `%${custom_query_in.keyword || ""}%` })
+          .orWhere("video_course.title LIKE :title", { title: `%${custom_query_in.keyword || ""}%` });
       }))
       .orderBy("video_course.updated_at", "DESC")
       .take(take)
@@ -358,6 +399,20 @@ export class VideoCourseService {
       videoCourses[0] = videoCourses[0].sort((a, b) => a.frequency_num - b.frequency_num);
     }
     return videoCourses;
+  }
+
+  /**
+   * 查询多个id的视频课
+   * @param ids id集合
+   * @param select select conditions
+   */
+  public async findManyByIds(ids: string, select?: FindOptionsSelect<VideoCourse>): Promise<VideoCourse[] | undefined> {
+    const ids_list = ids.split(",");
+    return await this.videoCourseRepo.find({
+      where: { status: 1, id: In(ids_list) },
+      order: { updated_at: "asc" },
+      select
+    });
   }
 
   /**

@@ -63,7 +63,7 @@ export class CourseOrderService {
         code: HttpStatus.BAD_REQUEST,
         message: "所选课程存在已下架，无法购买，请重试"
       };
-    } else if (total.toString() !== payment_num) {
+    } else if (total.toString() !== payment_num.toString()) {
       return {
         code: HttpStatus.BAD_REQUEST,
         message: "价格不一致或发生变化，请重试"
@@ -200,7 +200,8 @@ export class CourseOrderService {
         status: courseOrdersSame[0].status,
         user_id: user_id,
         order_total: courseOrdersSame[0].order_total,
-        course_infos: []
+        course_infos: [],
+        order_list: courseOrdersSame
       }
       for (let j = 0; j < courseOrdersSame.length; j++) {
         const courseFind = courseOrdersSame[j].course_type === 1 ? await this.liveCourseService.findOneById(courseOrdersSame[j].course_id) : await this.videoCourseService.findOneById(courseOrdersSame[j].course_id)

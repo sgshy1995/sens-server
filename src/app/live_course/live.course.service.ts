@@ -8,7 +8,7 @@ import {
   getRepository,
   Between,
   MoreThan,
-  getManager, Brackets
+  getManager, Brackets, In
 } from "typeorm";
 import { LiveCourse } from "../../db/entities/LiveCourse";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
@@ -220,6 +220,36 @@ export class LiveCourseService {
   }
 
   /**
+   * 查询多个id查询多个直播课
+   * @param ids ids id集合
+   */
+  async findManyLiveCoursesByIds(ids: string): Promise<ResponseResult> {
+    const liveCoursesFind = await this.findManyByIds(ids, {
+      id: true,
+      title: true,
+      cover: true,
+      description: true,
+      course_type: true,
+      live_num: true,
+      frequency_num: true,
+      price: true,
+      is_discount: true,
+      discount: true,
+      discount_validity: true,
+      carousel: true,
+      publish_time: true,
+      status: true,
+      created_at: true,
+      updated_at: true
+    });
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: liveCoursesFind
+    };
+  }
+
+  /**
    * 根据 id 查询
    *
    * @param id id
@@ -348,7 +378,21 @@ export class LiveCourseService {
   }
 
   /**
-   * 查询所有视频课
+   * 查询多个id的直播课
+   * @param ids id集合
+   * @param select select conditions
+   */
+  public async findManyByIds(ids: string, select?: FindOptionsSelect<LiveCourse>): Promise<LiveCourse[] | undefined> {
+    const ids_list = ids.split(',')
+    return await this.liveCourseRepo.find({
+      where: { status: 1, id: In(ids_list) },
+      order: { updated_at: "asc" },
+      select
+    });
+  }
+
+  /**
+   * 查询所有直播课
    * @param select select conditions
    */
   public async findAll(select?: FindOptionsSelect<LiveCourse>): Promise<LiveCourse[] | undefined> {

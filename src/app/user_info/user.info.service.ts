@@ -111,7 +111,7 @@ export class UserInfoService {
   }
 
   /**
-   * 购物车下单
+   * 购物车课程下单
    *
    * @param user_id user_id
    * @param course_chart_ids 课程购物车id集合
@@ -119,7 +119,7 @@ export class UserInfoService {
    * @param order_time 下单时间
    * @param payment_type 下单支付类型
    */
-  async addChartOrderByUserId(user_id: string, course_chart_ids: string, course_info: { course_ids: string, course_types: string, payment_num: string }, order_time: string, payment_type: number): Promise<ResponseResult> {
+  async addChartCourseOrderByUserId(user_id: string, course_chart_ids: string, course_info: { course_ids: string, course_types: string, payment_num: string }, order_time: string, payment_type: number): Promise<ResponseResult> {
     const infoFind = await this.userInfoRepo.findOne({
       where: {
         user_id
@@ -129,6 +129,29 @@ export class UserInfoService {
     const course_order_result = await this.courseOrderService.createCourseOrders(user_id, course_info.course_ids, course_info.course_types, course_info.payment_num, payment_type, order_time );
     if (course_order_result.code !== HttpStatus.OK) return course_order_result;
     await this.courseChartService.deleteCourseChartIds(course_chart_ids);
+    return {
+      code: HttpStatus.OK,
+      message: "下单成功"
+    };
+  }
+
+  /**
+   * 普通课程下单
+   *
+   * @param user_id user_id
+   * @param course_info 课程信息
+   * @param order_time 下单时间
+   * @param payment_type 下单支付类型
+   */
+  async addNormalCourseOrderByUserId(user_id: string, course_info: { course_ids: string, course_types: string, payment_num: string }, order_time: string, payment_type: number): Promise<ResponseResult> {
+    const infoFind = await this.userInfoRepo.findOne({
+      where: {
+        user_id
+      }
+    });
+    // 创建课程支付订单
+    const course_order_result = await this.courseOrderService.createCourseOrders(user_id, course_info.course_ids, course_info.course_types, course_info.payment_num, payment_type, order_time );
+    if (course_order_result.code !== HttpStatus.OK) return course_order_result;
     return {
       code: HttpStatus.OK,
       message: "下单成功"

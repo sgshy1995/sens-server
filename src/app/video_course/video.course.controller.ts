@@ -128,6 +128,16 @@ export class VideoCourseController {
 
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
+  @Get("find/ids")
+  async findManyVideoCoursesByIds(@Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
+    const { ids } = request.query
+    const res = await this.videoCourseService.findManyVideoCoursesByIds(ids ? ids.toString() : '');
+    response.status(res.code);
+    return res;
+  }
+
+  @UseGuards(new TokenGuard()) // 使用 token redis 验证
+  @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Put()
   async updateVideoCourse(@Body() videoCourse: VideoCourse, @Res({ passthrough: true }) response: Response): Promise<ResponseResult> {
     const res = await this.videoCourseService.updateVideoCourse(videoCourse);
