@@ -4,9 +4,9 @@ import { Repository, FindOptionsSelect } from "typeorm";
 import { UserInfo } from "../../db/entities/UserInfo";
 import { ResponseResult } from "../../types/result.interface";
 import { UserService } from "../user/user.service";
-import { CourseOrder } from "../../db/entities/CourseOrder";
 import { CourseOrderService } from "../course_order/course.order.service";
 import { CourseChartService } from "../course_chart/course.chart.service";
+import { EquipmentOrderService } from "../equipment_order/equipment.order.service";
 import { EquipmentChartService } from "../equipment_chart/equipment.chart.service";
 import { TopUpOrderService } from "../top_up_order/top.up.order.service";
 import { TopUpOrder } from "../../db/entities/TopUpOrder";
@@ -25,6 +25,8 @@ export class UserInfoService {
     private readonly userService: UserService,
     @Inject(forwardRef(() => CourseOrderService))
     private readonly courseOrderService: CourseOrderService,
+    @Inject(forwardRef(() => EquipmentOrderService))
+    private readonly equipmentOrderService: EquipmentOrderService,
     @Inject(forwardRef(() => TopUpOrderService))
     private readonly topUpOrderService: TopUpOrderService,
     @Inject(forwardRef(() => CourseChartService))
@@ -151,6 +153,60 @@ export class UserInfoService {
     });
     // 创建课程支付订单
     const course_order_result = await this.courseOrderService.createCourseOrders(user_id, course_info.course_ids, course_info.course_types, course_info.payment_num, payment_type, order_time );
+    if (course_order_result.code !== HttpStatus.OK) return course_order_result;
+    return {
+      code: HttpStatus.OK,
+      message: "下单成功"
+    };
+  }
+
+  /**
+   * 购物车器材下单
+   *
+   * @param user_id user_id
+   * @param equipment_chart_ids 器材购物车id集合
+   * @param equipment_info 器材信息
+   * @param shipping_address 配送地址
+   * @param shipping_name 配送人
+   * @param shipping_phone 配送联系电话
+   * @param order_time 下单时间
+   * @param payment_type 下单支付类型
+   */
+  async addChartEquipmentOrderByUserId(user_id: string, equipment_chart_ids: string, equipment_info: { equipment_ids: string, model_ids: string, order_nums: string, course_types: string, payment_num: string }, shipping_address: string, shipping_name: string, shipping_phone: string, order_time: string, payment_type: number): Promise<ResponseResult> {
+    const infoFind = await this.userInfoRepo.findOne({
+      where: {
+        user_id
+      }
+    });
+    // 创建课程支付订单
+    const course_order_result = await this.equipmentOrderService.createEquipmentOrders(user_id, equipment_info.equipment_ids, equipment_info.model_ids, equipment_info.order_nums, shipping_address, shipping_name, shipping_phone, equipment_info.payment_num, payment_type, order_time );
+    if (course_order_result.code !== HttpStatus.OK) return course_order_result;
+    await this.equipmentChartService.deleteEquipmentChartsByIds(equipment_chart_ids);
+    return {
+      code: HttpStatus.OK,
+      message: "下单成功"
+    };
+  }
+
+  /**
+   * 普通器材下单
+   *
+   * @param user_id user_id
+   * @param equipment_info 器材信息
+   * @param shipping_address 配送地址
+   * @param shipping_name 配送人
+   * @param shipping_phone 配送联系电话
+   * @param order_time 下单时间
+   * @param payment_type 下单支付类型
+   */
+  async addNormalEquipmentOrderByUserId(user_id: string, equipment_info: { equipment_ids: string, model_ids: string, order_nums: string, course_types: string, payment_num: string }, shipping_address: string, shipping_name: string, shipping_phone: string, order_time: string, payment_type: number): Promise<ResponseResult> {
+    const infoFind = await this.userInfoRepo.findOne({
+      where: {
+        user_id
+      }
+    });
+    // 创建课程支付订单
+    const course_order_result = await this.equipmentOrderService.createEquipmentOrders(user_id, equipment_info.equipment_ids, equipment_info.model_ids, equipment_info.order_nums, shipping_address, shipping_name, shipping_phone, equipment_info.payment_num, payment_type, order_time );
     if (course_order_result.code !== HttpStatus.OK) return course_order_result;
     return {
       code: HttpStatus.OK,

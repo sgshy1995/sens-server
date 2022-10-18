@@ -129,8 +129,9 @@ export class EquipmentChartService {
    *
    * @param ids ids 数据id集合
    */
-  async deleteEquipmentChartsByIds(ids: string[]): Promise<ResponseResult> {
-    const equipmentChartsFind = await this.equipmentChartRepo.find({ where: { id: In(ids) } });
+  async deleteEquipmentChartsByIds(ids: string): Promise<ResponseResult> {
+    const ids_list = ids.split(',')
+    const equipmentChartsFind = await this.equipmentChartRepo.find({ where: { id: In(ids_list) } });
     await this.equipmentChartRepo.remove(equipmentChartsFind);
     return {
       code: HttpStatus.OK,

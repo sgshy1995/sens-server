@@ -47,6 +47,7 @@ import { EquipmentChartModule } from "./app/equipment_chart/equipment.chart.modu
 import { CourseOrderModule } from "./app/course_order/course.order.module";
 import { TopUpOrderModule } from "./app/top_up_order/top.up.order.module";
 import { AddressModule } from "./app/address/address.module";
+import { EquipmentOrderModule } from "./app/equipment_order/equipment.order.module";
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { AddressModule } from "./app/address/address.module";
     CourseChartModule,
     EquipmentChartModule,
     CourseOrderModule,
+    EquipmentOrderModule,
     TopUpOrderModule,
     AddressModule
   ],

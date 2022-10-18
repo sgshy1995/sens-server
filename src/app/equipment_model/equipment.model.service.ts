@@ -5,6 +5,7 @@ import { EquipmentModel } from "../../db/entities/EquipmentModel";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
 import { EquipmentService } from "../equipment/equipment.service";
 import { EquipmentChartService } from "../equipment_chart/equipment.chart.service";
+import { EquipmentOrderService } from "../equipment_order/equipment.order.service";
 
 type CustomQuery = {
   frequency_num_order?: "desc" | "asc"
@@ -18,7 +19,9 @@ export class EquipmentModelService {
     @Inject(forwardRef(() => EquipmentService))
     private readonly equipmentService: EquipmentService,
     @Inject(forwardRef(() => EquipmentChartService))
-    private readonly equipmentChartService: EquipmentChartService
+    private readonly equipmentChartService: EquipmentChartService,
+    @Inject(forwardRef(() => EquipmentOrderService))
+    private readonly equipmentOrderService: EquipmentOrderService
   ) {
   }
 
@@ -191,6 +194,7 @@ export class EquipmentModelService {
   async findAllEquipmentModels(): Promise<ResponseResult> {
     const equipmentModelsFind = await this.findAll({
       id: true,
+      equipment_id: true,
       title: true,
       description: true,
       multi_figure: true,
@@ -227,6 +231,7 @@ export class EquipmentModelService {
   async findManyEquipmentModels(custom: FindOptionsWhere<EquipmentModel>, query: PaginationQuery, custom_query?: CustomQuery, hot_sort: boolean = false): Promise<ResponsePaginationResult> {
     const [equipmentModelsFind, totalCount] = await this.findMany(custom, query, custom_query, hot_sort, {
       id: true,
+      equipment_id: true,
       title: true,
       description: true,
       multi_figure: true,
@@ -265,6 +270,7 @@ export class EquipmentModelService {
   async findManyEquipmentModelsByEquipmentId(equipment_id: string): Promise<ResponseResult> {
     const equipmentModelsFind = await this.findManyByEquipmentId(equipment_id, {
       id: true,
+      equipment_id: true,
       title: true,
       description: true,
       multi_figure: true,
@@ -298,6 +304,7 @@ export class EquipmentModelService {
   async findOneEquipmentModelById(id: string): Promise<ResponseResult> {
     const equipmentModelFind = await this.findOneById(id, {
       id: true,
+      equipment_id: true,
       title: true,
       description: true,
       multi_figure: true,

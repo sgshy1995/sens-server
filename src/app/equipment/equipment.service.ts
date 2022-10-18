@@ -6,12 +6,13 @@ import {
   FindOptionsWhere,
   Like,
   getRepository,
-  getManager, Brackets
+  getManager, Brackets, In
 } from "typeorm";
 import { Equipment } from "../../db/entities/Equipment";
 import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
 import { EquipmentModelService } from "../equipment_model/equipment.model.service";
 import { EquipmentChartService } from "../equipment_chart/equipment.chart.service";
+import { EquipmentOrderService } from "../equipment_order/equipment.order.service";
 
 type CustomQuery = {
   frequency_total_num_order?: "desc" | "asc"
@@ -25,7 +26,9 @@ export class EquipmentService {
     @Inject(forwardRef(() => EquipmentModelService))
     private readonly equipmentModelService: EquipmentModelService,
     @Inject(forwardRef(() => EquipmentChartService))
-    private readonly equipmentChartService: EquipmentChartService
+    private readonly equipmentChartService: EquipmentChartService,
+    @Inject(forwardRef(() => EquipmentOrderService))
+    private readonly equipmentOrderService: EquipmentOrderService
   ) {
   }
 
@@ -81,7 +84,7 @@ export class EquipmentService {
     const equipmentFind = await this.equipmentRepo.findOne({ where: { serial_number } });
     if (equipmentFind && equipmentFind.id !== id) {
       responseBody.data = false;
-      responseBody.message = '器材编号已存在'
+      responseBody.message = "器材编号已存在";
     }
     return responseBody;
   }
@@ -214,6 +217,35 @@ export class EquipmentService {
   }
 
   /**
+   * 查询多个器材包括型号 无分页
+   * @param ids id集合
+   */
+  async findManyEquipmentsWithModels(ids: string): Promise<ResponseResult> {
+    const equipmentsFind = await this.findManyWithModels(ids, {
+      id: true,
+      serial_number: true,
+      title: true,
+      cover: true,
+      description: true,
+      long_figure: true,
+      equipment_type: true,
+      model_num: true,
+      frequency_total_num: true,
+      has_discount: true,
+      carousel: true,
+      publish_time: true,
+      status: true,
+      created_at: true,
+      updated_at: true
+    });
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: equipmentsFind
+    };
+  }
+
+  /**
    * 根据 id 查询
    *
    * @param id id
@@ -298,6 +330,26 @@ export class EquipmentService {
       equipments[0] = equipments[0].sort((a, b) => b.frequency_total_num - a.frequency_total_num);
     } else if (custom_query_in.frequency_total_num_order === "asc") {
       equipments[0] = equipments[0].sort((a, b) => a.frequency_total_num - b.frequency_total_num);
+    }
+    return equipments;
+  }
+
+  /**
+   * 查询多个视频课包括型号 不带分页
+   * @param ids id集合
+   * @param select select conditions
+   */
+  public async findManyWithModels(ids: string, select?: FindOptionsSelect<Equipment>): Promise<Equipment[]> {
+    const ids_list = ids.split(",");
+    const equipments = await this.equipmentRepo.find({ where: { id: In(ids_list) }, select });
+    for (let i = 0; i < equipments.length; i++) {
+      const models = await this.equipmentModelService.findManyByEquipmentId(equipments[i].id);
+      Object.defineProperty(equipments[i], "models", {
+        value: models,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
     }
     return equipments;
   }

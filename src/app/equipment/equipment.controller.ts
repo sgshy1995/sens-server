@@ -156,6 +156,16 @@ export class EquipmentController {
 
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
+  @Get("with_models")
+  async findManyEquipmentsWithModels(@Res({ passthrough: true }) response: Response, @Req() request: Request): Promise<Response | void | Record<string, any>> {
+    const { query } = request;
+    const res = await this.equipmentService.findManyEquipmentsWithModels(query.ids ? query.ids.toString() : '');
+    response.status(res.code);
+    return res;
+  }
+
+  @UseGuards(new TokenGuard()) // 使用 token redis 验证
+  @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Get(":id")
   async findOneEquipmentById(@Param("id") id: string, @Res({ passthrough: true }) response: Response): Promise<Response | void | Record<string, any>> {
     const res = await this.equipmentService.findOneEquipmentById(id);

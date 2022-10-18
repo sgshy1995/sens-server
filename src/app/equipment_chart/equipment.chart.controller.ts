@@ -74,8 +74,8 @@ export class EquipmentChartController {
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Delete("ids/delete")
-  async deleteEquipmentChartsByIds(@Res({ passthrough: true }) response: Response, @Body() ids: string[]): Promise<Response | void | Record<string, any>> {
-    const res = await this.equipmentChartService.deleteEquipmentChartsByIds(ids);
+  async deleteEquipmentChartsByIds(@Res({ passthrough: true }) response: Response, @Body() ids: string): Promise<Response | void | Record<string, any>> {
+    const res = await this.equipmentChartService.deleteEquipmentChartsByIds(ids || '');
     response.status(res.code);
     return res;
   }
