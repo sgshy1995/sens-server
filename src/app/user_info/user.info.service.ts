@@ -171,15 +171,16 @@ export class UserInfoService {
    * @param shipping_phone 配送联系电话
    * @param order_time 下单时间
    * @param payment_type 下单支付类型
+   * @param remark 备注
    */
-  async addChartEquipmentOrderByUserId(user_id: string, equipment_chart_ids: string, equipment_info: { equipment_ids: string, model_ids: string, order_nums: string, course_types: string, payment_num: string }, shipping_address: string, shipping_name: string, shipping_phone: string, order_time: string, payment_type: number): Promise<ResponseResult> {
+  async addChartEquipmentOrderByUserId(user_id: string, equipment_chart_ids: string, equipment_info: { equipment_ids: string, model_ids: string, order_nums: string, course_types: string, payment_num: string }, shipping_address: string, shipping_name: string, shipping_phone: string, order_time: string, payment_type: number, remark?: string): Promise<ResponseResult> {
     const infoFind = await this.userInfoRepo.findOne({
       where: {
         user_id
       }
     });
     // 创建课程支付订单
-    const course_order_result = await this.equipmentOrderService.createEquipmentOrders(user_id, equipment_info.equipment_ids, equipment_info.model_ids, equipment_info.order_nums, shipping_address, shipping_name, shipping_phone, equipment_info.payment_num, payment_type, order_time );
+    const course_order_result = await this.equipmentOrderService.createEquipmentOrders(user_id, equipment_info.equipment_ids, equipment_info.model_ids, equipment_info.order_nums, shipping_address, shipping_name, shipping_phone, equipment_info.payment_num, payment_type, order_time, remark );
     if (course_order_result.code !== HttpStatus.OK) return course_order_result;
     await this.equipmentChartService.deleteEquipmentChartsByIds(equipment_chart_ids);
     return {
@@ -198,15 +199,16 @@ export class UserInfoService {
    * @param shipping_phone 配送联系电话
    * @param order_time 下单时间
    * @param payment_type 下单支付类型
+   * @param remark 备注
    */
-  async addNormalEquipmentOrderByUserId(user_id: string, equipment_info: { equipment_ids: string, model_ids: string, order_nums: string, course_types: string, payment_num: string }, shipping_address: string, shipping_name: string, shipping_phone: string, order_time: string, payment_type: number): Promise<ResponseResult> {
+  async addNormalEquipmentOrderByUserId(user_id: string, equipment_info: { equipment_ids: string, model_ids: string, order_nums: string, course_types: string, payment_num: string }, shipping_address: string, shipping_name: string, shipping_phone: string, order_time: string, payment_type: number, remark?: string): Promise<ResponseResult> {
     const infoFind = await this.userInfoRepo.findOne({
       where: {
         user_id
       }
     });
     // 创建课程支付订单
-    const course_order_result = await this.equipmentOrderService.createEquipmentOrders(user_id, equipment_info.equipment_ids, equipment_info.model_ids, equipment_info.order_nums, shipping_address, shipping_name, shipping_phone, equipment_info.payment_num, payment_type, order_time );
+    const course_order_result = await this.equipmentOrderService.createEquipmentOrders(user_id, equipment_info.equipment_ids, equipment_info.model_ids, equipment_info.order_nums, shipping_address, shipping_name, shipping_phone, equipment_info.payment_num, payment_type, order_time, remark );
     if (course_order_result.code !== HttpStatus.OK) return course_order_result;
     return {
       code: HttpStatus.OK,

@@ -38,8 +38,9 @@ export class EquipmentOrderService {
    * @param payment_num 支付金额
    * @param payment_type 支付方式
    * @param order_time 下单时间
+   * @param remark 备注
    */
-  async createEquipmentOrders(user_id, equipment_ids_str: string, model_ids_str: string, order_nums_str: string, shipping_address: string, shipping_name: string, shipping_phone: string, payment_num: string, payment_type: number, order_time: string): Promise<ResponseResult> {
+  async createEquipmentOrders(user_id, equipment_ids_str: string, model_ids_str: string, order_nums_str: string, shipping_address: string, shipping_name: string, shipping_phone: string, payment_num: string, payment_type: number, order_time: string, remark?: string): Promise<ResponseResult> {
     let responseBody = { code: HttpStatus.OK, message: "创建成功" };
     // 校验型号数据是否存在或已下架、缺货
     const equipment_ids = equipment_ids_str.split(",");
@@ -144,6 +145,8 @@ export class EquipmentOrderService {
       equipmentOrder.shipping_name = shipping_name;
       // 配送联系方式
       equipmentOrder.shipping_phone = shipping_phone;
+      // 备注
+      equipmentOrder.remark = remark || null;
       // 放入列表
       equipmentOrdersList.push(equipmentOrder);
     });
@@ -217,6 +220,7 @@ export class EquipmentOrderService {
       shipping_phone: true,
       shipping_name: true,
       courier_number: true,
+      remark: true,
       status: true,
       created_at: true,
       updated_at: true
@@ -246,6 +250,7 @@ export class EquipmentOrderService {
         shipping_name: outerSame[0].shipping_name,
         shipping_phone: outerSame[0].shipping_phone,
         courier_number: outerSame[0].courier_number,
+        remark: outerSame[0].remark,
         equipment: [],
         order_list: outerSame
       };
@@ -311,6 +316,7 @@ export class EquipmentOrderService {
       shipping_phone: true,
       shipping_name: true,
       courier_number: true,
+      remark: true,
       status: true,
       created_at: true,
       updated_at: true
@@ -339,6 +345,7 @@ export class EquipmentOrderService {
       shipping_name: equipmentOrdersFind[0].shipping_name,
       shipping_phone: equipmentOrdersFind[0].shipping_phone,
       courier_number: equipmentOrdersFind[0].courier_number,
+      remark: equipmentOrdersFind[0].remark,
       equipment: [],
       order_list: equipmentOrdersFind
     };
@@ -402,6 +409,7 @@ export class EquipmentOrderService {
       shipping_phone: true,
       shipping_name: true,
       courier_number: true,
+      remark: true,
       status: true,
       created_at: true,
       updated_at: true
@@ -442,6 +450,7 @@ export class EquipmentOrderService {
       shipping_phone: true,
       shipping_name: true,
       courier_number: true,
+      remark: true,
       status: true,
       created_at: true,
       updated_at: true

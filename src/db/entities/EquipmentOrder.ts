@@ -69,6 +69,9 @@ export class EquipmentOrder {
   @Column("varchar", { comment: "物流单号", nullable: true })
   courier_number?: string;
 
+  @Column("varchar", { comment: "备注", nullable: true })
+  remark?: string;
+
   @Column("int", { comment: "订单状态 6 已退货 5 退货中 4 已收货 3 已发货 2 待发货 1 待支付 0 取消/关闭" })
   status: number;
 

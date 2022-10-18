@@ -138,10 +138,10 @@ export class UserInfoController {
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Post("chart_equipment_order")
-  async addChartEquipmentOrderByUserId(@Body() info: { equipment_chart_ids: string, equipment_info: { equipment_ids: string, model_ids: string, order_nums: string, course_types: string, payment_num: string }, shipping_address: string, shipping_name: string, shipping_phone: string, order_time: string, payment_type: number }, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<ResponseResult> {
-    const { equipment_chart_ids, equipment_info, order_time, payment_type, shipping_address, shipping_name, shipping_phone } = info;
+  async addChartEquipmentOrderByUserId(@Body() info: { equipment_chart_ids: string, equipment_info: { equipment_ids: string, model_ids: string, order_nums: string, course_types: string, payment_num: string }, shipping_address: string, shipping_name: string, shipping_phone: string, order_time: string, payment_type: number, remark?: string }, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<ResponseResult> {
+    const { equipment_chart_ids, equipment_info, order_time, payment_type, shipping_address, shipping_name, shipping_phone, remark } = info;
     const user_id = request.user.id;
-    const res = await this.userInfoService.addChartEquipmentOrderByUserId(user_id, equipment_chart_ids, equipment_info, shipping_address, shipping_name, shipping_phone, order_time, payment_type);
+    const res = await this.userInfoService.addChartEquipmentOrderByUserId(user_id, equipment_chart_ids, equipment_info, shipping_address, shipping_name, shipping_phone, order_time, payment_type, remark);
     response.status(res.code);
     return res;
   }
@@ -149,10 +149,10 @@ export class UserInfoController {
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
   @Post("normal_equipment_order")
-  async addNormalEquipmentOrderByUserId(@Body() info: { equipment_info: { equipment_ids: string, model_ids: string, order_nums: string, course_types: string, payment_num: string }, shipping_address: string, shipping_name: string, shipping_phone: string, order_time: string, payment_type: number }, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<ResponseResult> {
-    const { equipment_info, order_time, payment_type, shipping_address, shipping_name, shipping_phone } = info;
+  async addNormalEquipmentOrderByUserId(@Body() info: { equipment_info: { equipment_ids: string, model_ids: string, order_nums: string, course_types: string, payment_num: string }, shipping_address: string, shipping_name: string, shipping_phone: string, order_time: string, payment_type: number, remark?: string }, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<ResponseResult> {
+    const { equipment_info, order_time, payment_type, shipping_address, shipping_name, shipping_phone, remark } = info;
     const user_id = request.user.id;
-    const res = await this.userInfoService.addNormalEquipmentOrderByUserId(user_id, equipment_info, shipping_address, shipping_name, shipping_phone, order_time, payment_type);
+    const res = await this.userInfoService.addNormalEquipmentOrderByUserId(user_id, equipment_info, shipping_address, shipping_name, shipping_phone, order_time, payment_type, remark);
     response.status(res.code);
     return res;
   }
