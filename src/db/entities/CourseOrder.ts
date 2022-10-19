@@ -9,17 +9,14 @@ export class CourseOrder {
   @Column("varchar", { comment: "用户id" })
   user_id: string;
 
-  @Column("text", { comment: "课程id" })
-  course_id: string;
+  @Column("text", { comment: "课程id集合" })
+  course_ids: string;
 
-  @Column("int", { comment: "课程类型 1 直播课 0 视频课" })
-  course_type: number;
+  @Column("varchar", { comment: "课程类型集合 1 直播课 0 视频课" })
+  course_types: string;
 
-  @Column("varchar", { comment: "购买价格" })
-  order_price: string;
-
-  @Column("int", { comment: "购买排序" })
-  order_sort: number;
+  @Column("varchar", { comment: "购买价格集合" })
+  order_prices: string;
 
   @Column("int", { comment: "购买总数" })
   order_total: number;

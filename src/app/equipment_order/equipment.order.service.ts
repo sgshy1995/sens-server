@@ -110,48 +110,46 @@ export class EquipmentOrderService {
       min: 222222222222,
       max: 999999999999
     }).toString();
-    const equipmentOrdersList: EquipmentOrder[] = [];
-    model_ids.forEach((id, index) => {
-      const equipmentOrder = new EquipmentOrder();
-      // 插入数据时，删除 id，以避免请求体内传入 id
-      equipmentOrder.id !== null && equipmentOrder.id !== undefined && delete equipmentOrder.id;
-      // 用户id
-      equipmentOrder.user_id = user_id;
-      equipmentOrder.equipment_id = equipment_ids[index];
-      equipmentOrder.model_id = id;
-      equipmentOrder.order_num = Number(order_nums[index]);
-      equipmentOrder.payment_num = payment_num;
-      equipmentOrder.order_time = new Date(order_time);
-      // 支付类型
-      equipmentOrder.payment_type = payment_type;
-      equipmentOrder.order_price = models[index].is_discount ? models[index].discount : models[index].price;
-      // 订单号
-      equipmentOrder.order_no = order_no;
-      // 支付时间
-      equipmentOrder.payment_time = payment_time;
-      // 支付流水号
-      equipmentOrder.payment_no = payment_no;
-      // 状态
-      equipmentOrder.status = 2;
-      // 购买排序
-      equipmentOrder.order_sort = index;
-      // 购买器材种类数
-      equipmentOrder.order_total = model_ids.length;
-      // 购买总数量
-      equipmentOrder.order_total_num = order_nums.map(num => Number(num)).reduce((a, b) => a + b);
-      // 配送地址
-      equipmentOrder.shipping_address = shipping_address;
-      // 配送人
-      equipmentOrder.shipping_name = shipping_name;
-      // 配送联系方式
-      equipmentOrder.shipping_phone = shipping_phone;
-      // 备注
-      equipmentOrder.remark = remark || null;
-      // 放入列表
-      equipmentOrdersList.push(equipmentOrder);
-    });
+
+    const equipmentOrder = new EquipmentOrder();
+    // 插入数据时，删除 id，以避免请求体内传入 id
+    equipmentOrder.id !== null && equipmentOrder.id !== undefined && delete equipmentOrder.id;
+    // 用户id
+    equipmentOrder.user_id = user_id;
+    equipmentOrder.equipment_ids = equipment_ids_str;
+    equipmentOrder.model_ids = model_ids_str;
+    // 购买价格
+    equipmentOrder.order_prices = models.map(model => model.is_discount ? model.discount : model.price).join();
+    // 下单数量
+    equipmentOrder.order_nums = order_nums_str;
+    // 支付金额
+    equipmentOrder.payment_num = payment_num;
+    // 下单时间
+    equipmentOrder.order_time = new Date(order_time);
+    // 支付类型
+    equipmentOrder.payment_type = payment_type;
+    // 订单号
+    equipmentOrder.order_no = order_no;
+    // 支付时间
+    equipmentOrder.payment_time = payment_time;
+    // 支付流水号
+    equipmentOrder.payment_no = payment_no;
+    // 状态
+    equipmentOrder.status = 2;
+    // 购买器材种类数
+    equipmentOrder.order_total = model_ids.length;
+    // 购买总数量
+    equipmentOrder.order_total_num = order_nums.map(num => Number(num)).reduce((a, b) => a + b);
+    // 配送地址
+    equipmentOrder.shipping_address = shipping_address;
+    // 配送人
+    equipmentOrder.shipping_name = shipping_name;
+    // 配送联系方式
+    equipmentOrder.shipping_phone = shipping_phone;
+    // 备注
+    equipmentOrder.remark = remark || null;
     // 保存
-    await this.equipmentOrderRepo.save(equipmentOrdersList);
+    await this.equipmentOrderRepo.save(equipmentOrder);
     // 课程增加购买次数
     for (let i = 0; i < models.length; i++) {
       models[i].frequency_num += 1;
@@ -200,12 +198,11 @@ export class EquipmentOrderService {
     const equipmentOrdersFind = await this.findManyByUserId(user_id, {
       id: true,
       user_id: true,
-      equipment_id: true,
-      model_id: true,
-      order_num: true,
+      equipment_ids: true,
+      model_ids: true,
+      order_prices: true,
+      order_nums: true,
       order_total_num: true,
-      order_price: true,
-      order_sort: true,
       order_total: true,
       order_no: true,
       order_time: true,
@@ -225,134 +222,22 @@ export class EquipmentOrderService {
       created_at: true,
       updated_at: true
     });
-    const equipmentOrders = [];
-    const order_no_list = [];
-    equipmentOrdersFind.forEach(item => {
-      if (!order_no_list.includes(item.order_no)) order_no_list.push(item.order_no);
-    });
-    // TODO 双层 for 循环，如果缓慢考虑后期优化
-    for (let i = 0; i < order_no_list.length; i++) {
-      const outerSame = equipmentOrdersFind.filter(item => item.order_no === order_no_list[i]).sort((a, b) => a.order_sort - b.order_sort);
-      const equipmentOrder = {
-        order_no: order_no_list[i],
-        payment_no: outerSame[0].payment_no,
-        payment_type: outerSame[0].payment_type,
-        order_time: outerSame[0].order_time,
-        payment_time: outerSame[0].payment_time,
-        payment_num: outerSame[0].payment_num,
-        status: outerSame[0].status,
-        user_id: user_id,
-        order_total: outerSame[0].order_total,
-        origin_address: outerSame[0].origin_address,
-        origin_name: outerSame[0].origin_name,
-        origin_phone: outerSame[0].origin_phone,
-        shipping_address: outerSame[0].shipping_address,
-        shipping_name: outerSame[0].shipping_name,
-        shipping_phone: outerSame[0].shipping_phone,
-        courier_number: outerSame[0].courier_number,
-        remark: outerSame[0].remark,
-        equipment: [],
-        order_list: outerSame
-      };
-      // 找出所有的重复器材
-      for (let j = 0; j < outerSame.length; j++) {
-        const equipment_no_list = [];
-        if (!equipment_no_list.includes(outerSame[j].equipment_id)) equipment_no_list.push(outerSame[j].equipment_id);
-        // 获取器材和对应型号
-        for (let k = 0; k < equipment_no_list.length; k++) {
-          const equipmentFind = await this.equipmentService.findOneById(equipment_no_list[k]);
-          const equipment_order = {
-            ...equipmentFind,
-            models: []
-          };
-          for (let l = 0; l < equipment_no_list.length; l++) {
-            const outer_find = outerSame.find(item => item.equipment_id === equipment_no_list[l]);
-            const model_id = outer_find.model_id;
-            const modelFind = await this.equipmentModelService.findOneById(model_id);
-            const model_order = {
-              ...modelFind,
-              add_num: outer_find.order_num,
-              order_price: outer_find.order_price
-            };
-            equipment_order.models.push(model_order);
-          }
-          equipmentOrder.equipment.push(equipment_order);
-        }
-      }
-      equipmentOrders.push(equipmentOrder);
-    }
-    return {
-      code: HttpStatus.OK,
-      message: "查询成功",
-      data: equipmentOrders
-    };
-  }
 
-  /**
-   * 根据订单号，查询多个订单信息，并整合为一个
-   * @param order_no order_no
-   */
-  async findManyEquipmentOrdersByOrderNoToOne(order_no: string): Promise<ResponseResult> {
-    const equipmentOrdersFind = await this.findManyByOrderNo(order_no, {
-      id: true,
-      user_id: true,
-      equipment_id: true,
-      model_id: true,
-      order_num: true,
-      order_total_num: true,
-      order_price: true,
-      order_sort: true,
-      order_total: true,
-      order_no: true,
-      order_time: true,
-      payment_no: true,
-      payment_type: true,
-      payment_time: true,
-      payment_num: true,
-      origin_address: true,
-      origin_name: true,
-      origin_phone: true,
-      shipping_address: true,
-      shipping_phone: true,
-      shipping_name: true,
-      courier_number: true,
-      remark: true,
-      status: true,
-      created_at: true,
-      updated_at: true
-    });
-    if (!equipmentOrdersFind.length) {
-      return {
-        code: HttpStatus.NOT_FOUND,
-        message: "订单号不存在"
-      };
-    }
-    // TODO 双层 for 循环，如果缓慢考虑后期优化
-    const equipmentOrder = {
-      order_no,
-      payment_no: equipmentOrdersFind[0].payment_no,
-      payment_type: equipmentOrdersFind[0].payment_type,
-      order_time: equipmentOrdersFind[0].order_time,
-      payment_time: equipmentOrdersFind[0].payment_time,
-      payment_num: equipmentOrdersFind[0].payment_num,
-      status: equipmentOrdersFind[0].status,
-      user_id: equipmentOrdersFind[0].user_id,
-      order_total: equipmentOrdersFind[0].order_total,
-      origin_address: equipmentOrdersFind[0].origin_address,
-      origin_name: equipmentOrdersFind[0].origin_name,
-      origin_phone: equipmentOrdersFind[0].origin_phone,
-      shipping_address: equipmentOrdersFind[0].shipping_address,
-      shipping_name: equipmentOrdersFind[0].shipping_name,
-      shipping_phone: equipmentOrdersFind[0].shipping_phone,
-      courier_number: equipmentOrdersFind[0].courier_number,
-      remark: equipmentOrdersFind[0].remark,
-      equipment: [],
-      order_list: equipmentOrdersFind
-    };
     // 找出所有的重复器材
     for (let j = 0; j < equipmentOrdersFind.length; j++) {
+      const equipment_ids = equipmentOrdersFind[j].equipment_ids.split(',')
+      const model_ids = equipmentOrdersFind[j].model_ids.split(',')
+      const order_prices = equipmentOrdersFind[j].order_prices.split(',')
+      const order_nums = equipmentOrdersFind[j].order_nums.split(',').map(num => Number(num))
+
       const equipment_no_list = [];
-      if (!equipment_no_list.includes(equipmentOrdersFind[j].equipment_id)) equipment_no_list.push(equipmentOrdersFind[j].equipment_id);
+
+      for (let k = 0; k < equipment_ids.length; k++) {
+        if (!equipment_no_list.includes(equipment_ids[k])) equipment_no_list.push(equipment_ids[k]);
+      }
+
+      const equipments = []
+
       // 获取器材和对应型号
       for (let k = 0; k < equipment_no_list.length; k++) {
         const equipmentFind = await this.equipmentService.findOneById(equipment_no_list[k]);
@@ -360,41 +245,56 @@ export class EquipmentOrderService {
           ...equipmentFind,
           models: []
         };
-        for (let l = 0; l < equipment_no_list.length; l++) {
-          const outer_find = equipmentOrdersFind.find(item => item.equipment_id === equipment_no_list[l]);
-          const model_id = outer_find.model_id;
-          const modelFind = await this.equipmentModelService.findOneById(model_id);
+        const model_no_list = [];
+        const model_no_price_list = [];
+        const model_no_num_list = [];
+        equipment_ids.forEach((equipment_id, index) => {
+          if (equipment_id === equipment_no_list[k]){
+            model_no_list.push(model_ids[index])
+            model_no_price_list.push(order_prices[index])
+            model_no_num_list.push(order_nums[index])
+          }
+        })
+        for (let l = 0; l < model_no_list.length; l++) {
+          const modelFind = await this.equipmentModelService.findOneById(model_no_list[l]);
           const model_order = {
             ...modelFind,
-            add_num: outer_find.order_num,
-            order_price: outer_find.order_price
+            add_num:  model_no_num_list[l],
+            order_price: model_no_price_list[l]
           };
           equipment_order.models.push(model_order);
         }
-        equipmentOrder.equipment.push(equipment_order);
+        equipments.push(equipment_order);
       }
+
+      Object.defineProperty(equipmentOrdersFind[j], 'equipment', {
+        value: equipments,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      })
     }
+
     return {
       code: HttpStatus.OK,
       message: "查询成功",
-      data: equipmentOrder
+      data: equipmentOrdersFind
     };
   }
 
   /**
-   * 根据订单号，查询多个订单信息
+   * 根据订单号，查询订单信息
    * @param order_no order_no
    */
-  async findManyEquipmentOrdersByOrder(order_no: string): Promise<ResponseResult> {
-    const equipmentOrdersFind = await this.findManyByOrderNo(order_no, {
+  async findOneEquipmentOrderByOrderNo(order_no: string): Promise<ResponseResult> {
+    const equipmentOrderFind = await this.findOneByOrderNo(order_no, {
       id: true,
       user_id: true,
-      equipment_id: true,
-      model_id: true,
-      order_num: true,
+      equipment_ids: true,
+      model_ids: true,
+      order_prices: true,
+      order_nums: true,
       order_total_num: true,
-      order_price: true,
-      order_sort: true,
       order_total: true,
       order_no: true,
       order_time: true,
@@ -414,10 +314,64 @@ export class EquipmentOrderService {
       created_at: true,
       updated_at: true
     });
+    if (!equipmentOrderFind) {
+      return {
+        code: HttpStatus.NOT_FOUND,
+        message: "订单号不存在"
+      };
+    }
+    const equipment_ids = equipmentOrderFind.equipment_ids.split(',')
+    const model_ids = equipmentOrderFind.model_ids.split(',')
+    const order_prices = equipmentOrderFind.order_prices.split(',')
+    const order_nums = equipmentOrderFind.order_nums.split(',').map(num => Number(num))
+
+    const equipment_no_list = [];
+
+    for (let k = 0; k < equipment_ids.length; k++) {
+      if (!equipment_no_list.includes(equipment_ids[k])) equipment_no_list.push(equipment_ids[k]);
+    }
+
+    const equipments = []
+
+    // 获取器材和对应型号
+    for (let k = 0; k < equipment_no_list.length; k++) {
+      const equipmentFind = await this.equipmentService.findOneById(equipment_no_list[k]);
+      const equipment_order = {
+        ...equipmentFind,
+        models: []
+      };
+      const model_no_list = [];
+      const model_no_price_list = [];
+      const model_no_num_list = [];
+      equipment_ids.forEach((equipment_id, index) => {
+        if (equipment_id === equipment_no_list[k]){
+          model_no_list.push(model_ids[index])
+          model_no_price_list.push(order_prices[index])
+          model_no_num_list.push(order_nums[index])
+        }
+      })
+      for (let l = 0; l < model_no_list.length; l++) {
+        const modelFind = await this.equipmentModelService.findOneById(model_no_list[l]);
+        const model_order = {
+          ...modelFind,
+          add_num:  model_no_num_list[l],
+          order_price: model_no_price_list[l]
+        };
+        equipment_order.models.push(model_order);
+      }
+      equipments.push(equipment_order);
+    }
+
+    Object.defineProperty(equipmentOrderFind, 'equipment', {
+      value: equipments,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    })
     return {
       code: HttpStatus.OK,
       message: "查询成功",
-      data: equipmentOrdersFind
+      data: equipmentOrderFind
     };
   }
 
@@ -430,12 +384,11 @@ export class EquipmentOrderService {
     const equipmentOrderFind = await this.findOneById(id, {
       id: true,
       user_id: true,
-      equipment_id: true,
-      model_id: true,
-      order_num: true,
+      equipment_ids: true,
+      model_ids: true,
+      order_prices: true,
+      order_nums: true,
       order_total_num: true,
-      order_price: true,
-      order_sort: true,
       order_total: true,
       order_no: true,
       order_time: true,
@@ -455,15 +408,65 @@ export class EquipmentOrderService {
       created_at: true,
       updated_at: true
     });
-    return equipmentOrderFind ?
-      {
-        code: HttpStatus.OK,
-        message: "查询成功",
-        data: equipmentOrderFind
-      } : {
+    if (!equipmentOrderFind) {
+      return {
         code: HttpStatus.NOT_FOUND,
-        message: "记录不存在"
+        message: "订单号不存在"
       };
+    }
+    const equipment_ids = equipmentOrderFind.equipment_ids.split(',')
+    const model_ids = equipmentOrderFind.model_ids.split(',')
+    const order_prices = equipmentOrderFind.order_prices.split(',')
+    const order_nums = equipmentOrderFind.order_nums.split(',').map(num => Number(num))
+
+    const equipment_no_list = [];
+
+    for (let k = 0; k < equipment_ids.length; k++) {
+      if (!equipment_no_list.includes(equipment_ids[k])) equipment_no_list.push(equipment_ids[k]);
+    }
+
+    const equipments = []
+
+    // 获取器材和对应型号
+    for (let k = 0; k < equipment_no_list.length; k++) {
+      const equipmentFind = await this.equipmentService.findOneById(equipment_no_list[k]);
+      const equipment_order = {
+        ...equipmentFind,
+        models: []
+      };
+      const model_no_list = [];
+      const model_no_price_list = [];
+      const model_no_num_list = [];
+      equipment_ids.forEach((equipment_id, index) => {
+        if (equipment_id === equipment_no_list[k]){
+          model_no_list.push(model_ids[index])
+          model_no_price_list.push(order_prices[index])
+          model_no_num_list.push(order_nums[index])
+        }
+      })
+      for (let l = 0; l < model_no_list.length; l++) {
+        const modelFind = await this.equipmentModelService.findOneById(model_no_list[l]);
+        const model_order = {
+          ...modelFind,
+          add_num:  model_no_num_list[l],
+          order_price: model_no_price_list[l]
+        };
+        equipment_order.models.push(model_order);
+      }
+      equipments.push(equipment_order);
+    }
+
+    Object.defineProperty(equipmentOrderFind, 'equipment', {
+      value: equipments,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    })
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: equipmentOrderFind
+    };
   }
 
   /**
@@ -495,8 +498,8 @@ export class EquipmentOrderService {
    * @param order_no order_no
    * @param select select conditions
    */
-  public async findManyByOrderNo(order_no: string, select?: FindOptionsSelect<EquipmentOrder>): Promise<EquipmentOrder[]> {
-    return await this.equipmentOrderRepo.find({
+  public async findOneByOrderNo(order_no: string, select?: FindOptionsSelect<EquipmentOrder>): Promise<EquipmentOrder> {
+    return await this.equipmentOrderRepo.findOne({
       where: {
         order_no
       },

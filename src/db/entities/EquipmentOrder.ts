@@ -9,23 +9,20 @@ export class EquipmentOrder {
   @Column("varchar", { comment: "用户id" })
   user_id: string;
 
-  @Column("text", { comment: "器材id" })
-  equipment_id: string;
+  @Column("text", { comment: "器材id集合" })
+  equipment_ids: string;
 
-  @Column("text", { comment: "型号id" })
-  model_id: string;
+  @Column("text", { comment: "型号id集合" })
+  model_ids: string;
 
-  @Column("int", { comment: "购买数量" })
-  order_num: number;
+  @Column("varchar", { comment: "购买价格集合" })
+  order_prices: string;
+
+  @Column("int", { comment: "购买数量集合" })
+  order_nums: string;
 
   @Column("int", { comment: "购买总数量" })
   order_total_num: number;
-
-  @Column("varchar", { comment: "购买价格" })
-  order_price: string;
-
-  @Column("int", { comment: "购买排序" })
-  order_sort: number;
 
   @Column("int", { comment: "购买器材种类数" })
   order_total: number;

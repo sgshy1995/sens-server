@@ -54,18 +54,18 @@ export class CourseOrderController {
 
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
-  @Get("order_to_one/:order_no")
-  async findManyCourseOrdersByOrderNoToOne(@Param("order_no") order_no: string, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
-    const res = await this.courseOrderService.findManyCourseOrdersByOrderNoToOne(order_no);
+  @Get("order_no/:order_no")
+  async findOneCourseOrderByOrderNo(@Param("order_no") order_no: string, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
+    const res = await this.courseOrderService.findOneCourseOrderByOrderNo(order_no);
     response.status(res.code);
     return res;
   }
 
   @UseGuards(new TokenGuard()) // 使用 token redis 验证
   @UseGuards(AuthGuard("jwt")) // 使用 'JWT' 进行验证
-  @Get("order_origin/:order_no")
-  async findManyCourseOrdersByOrder(@Param("order_no") order_no: string, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
-    const res = await this.courseOrderService.findManyCourseOrdersByOrder(order_no);
+  @Get("id/:id")
+  async findOneCourseOrderById(@Param("id") id: string, @Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
+    const res = await this.courseOrderService.findOneCourseOrderById(id);
     response.status(res.code);
     return res;
   }
