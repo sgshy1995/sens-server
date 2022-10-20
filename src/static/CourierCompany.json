@@ -1,0 +1,154 @@
+[
+  {
+    "name": "平安快递",
+    "type": "EFSPOST"
+  },
+  {
+    "name": "EMS",
+    "type": "EMS"
+  },
+  {
+    "name": "TNT",
+    "type": "TNT"
+  },
+  {
+    "name": "D速物流",
+    "type": "DEXP"
+  },
+  {
+    "name": "申通快递",
+    "type": "STO"
+  },
+  {
+    "name": "UPS",
+    "type": "UPS"
+  },
+  {
+    "name": "安捷快递",
+    "type": "ANJELEX"
+  },
+  {
+    "name": "顺丰快递",
+    "type": "SFEXPRESS"
+  },
+  {
+    "name": "苏宁速运",
+    "type": "SUNING"
+  },
+  {
+    "name": "百世快递",
+    "type": "HTKY"
+  },
+  {
+    "name": "百世快运",
+    "type": "BSKY"
+  },
+  {
+    "name": "天天快递",
+    "type": "TTKDEX"
+  },
+  {
+    "name": "德邦快递",
+    "type": "DEPPON"
+  },
+  {
+    "name": "国通快递",
+    "type": "GTO"
+  },
+  {
+    "name": "易通达快递",
+    "type": "ETD"
+  },
+  {
+    "name": "优速快递",
+    "type": "UC56"
+  },
+  {
+    "name": "邮政包裹",
+    "type": "CHINAPOST"
+  },
+  {
+    "name": "圆通快递",
+    "type": "YTO"
+  },
+  {
+    "name": "韵达快递",
+    "type": "YUNDA"
+  },
+  {
+    "name": "京东快递",
+    "type": "JD"
+  },
+  {
+    "name": "宅急送",
+    "type": "ZJS"
+  },
+  {
+    "name": "京广速递",
+    "type": "KKE"
+  },
+  {
+    "name": "中铁快运",
+    "type": "CRE"
+  },
+  {
+    "name": "中铁物流",
+    "type": "ZTKY"
+  },
+  {
+    "name": "蓝天快递",
+    "type": "BLUESKY"
+  },
+  {
+    "name": "中通快递",
+    "type": "ZTO"
+  },
+  {
+    "name": "中邮快递",
+    "type": "CNPL"
+  },
+  {
+    "name": "联邦快递",
+    "type": "FEDEX"
+  },
+  {
+    "name": "八达通快递",
+    "type": "BDT"
+  },
+  {
+    "name": "城市100",
+    "type": "CITY100"
+  },
+  {
+    "name": "城际快递",
+    "type": "CJKD"
+  },
+  {
+    "name": "环球速运",
+    "type": "HQSY"
+  },
+  {
+    "name": "捷安达快递",
+    "type": "JAD"
+  },
+  {
+    "name": "全信通快递",
+    "type": "QXT"
+  },
+  {
+    "name": "GLS",
+    "type": "GLS"
+  },
+  {
+    "name": "全球快递",
+    "type": "IQQKD"
+  },
+  {
+    "name": "汇丰物流",
+    "type": "HFWL"
+  },
+  {
+    "name": "极兔快递",
+    "type": "JITU"
+  }
+]

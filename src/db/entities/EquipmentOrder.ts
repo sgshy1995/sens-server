@@ -66,6 +66,9 @@ export class EquipmentOrder {
   @Column("varchar", { comment: "物流单号", nullable: true })
   courier_number?: string;
 
+  @Column("varchar", { comment: "物流公司", nullable: true })
+  courier_company?: string;
+
   @Column("varchar", { comment: "备注", nullable: true })
   remark?: string;
 

@@ -51,6 +51,10 @@ MAIL_USER=xxx@xx.xx
 MAIL_PASS=xxx
 # private yard (if you need)
 PRIVATE_YARD=xxxxxx
+# courier
+COURIER_SERVICE_APP_KEY=xxx
+COURIER_SERVICE_APP_SECRET=xxx
+COURIER_SERVICE_APP_URL=xxx.com/xxx
 ```
 
 ## Description

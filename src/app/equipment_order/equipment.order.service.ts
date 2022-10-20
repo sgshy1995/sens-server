@@ -1,17 +1,22 @@
 import { forwardRef, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, FindOptionsSelect } from "typeorm";
+import { FindOptionsSelect, FindOptionsWhere, getManager, Like, Repository } from "typeorm";
 import { EquipmentOrder } from "../../db/entities/EquipmentOrder";
-import { Equipment } from "../../db/entities/Equipment";
 import { EquipmentModel } from "../../db/entities/EquipmentModel";
-import { ResponseResult } from "../../types/result.interface";
+import { PaginationQuery, ResponsePaginationResult, ResponseResult } from "../../types/result.interface";
 import { EquipmentService } from "../equipment/equipment.service";
 import { EquipmentModelService } from "../equipment_model/equipment.model.service";
 import { UserInfoService } from "../user_info/user.info.service";
+import { UserService } from "../user/user.service";
+import { CourierService } from "../courier/courier.service";
+import { Courier } from "../../db/entities/Courier";
 import moment = require("moment");
 import Chance = require("chance");
 
 const chance = new Chance();
+
+// 物流信息 缓存时间 ms 1min = 1000 * 60 = 60000 六万
+const COURIER_CACHE_TIME = 1800000
 
 @Injectable()
 export class EquipmentOrderService {
@@ -22,7 +27,11 @@ export class EquipmentOrderService {
     @Inject(forwardRef(() => EquipmentModelService))
     private readonly equipmentModelService: EquipmentModelService,
     @Inject(forwardRef(() => UserInfoService))
-    private readonly userInfoService: UserInfoService
+    private readonly userInfoService: UserInfoService,
+    @Inject(forwardRef(() => UserService))
+    private readonly userService: UserService,
+    @Inject(forwardRef(() => CourierService))
+    private readonly courierService: CourierService
   ) {
   }
 
@@ -217,6 +226,7 @@ export class EquipmentOrderService {
       shipping_phone: true,
       shipping_name: true,
       courier_number: true,
+      courier_company: true,
       remark: true,
       status: true,
       created_at: true,
@@ -225,10 +235,10 @@ export class EquipmentOrderService {
 
     // 找出所有的重复器材
     for (let j = 0; j < equipmentOrdersFind.length; j++) {
-      const equipment_ids = equipmentOrdersFind[j].equipment_ids.split(',')
-      const model_ids = equipmentOrdersFind[j].model_ids.split(',')
-      const order_prices = equipmentOrdersFind[j].order_prices.split(',')
-      const order_nums = equipmentOrdersFind[j].order_nums.split(',').map(num => Number(num))
+      const equipment_ids = equipmentOrdersFind[j].equipment_ids.split(",");
+      const model_ids = equipmentOrdersFind[j].model_ids.split(",");
+      const order_prices = equipmentOrdersFind[j].order_prices.split(",");
+      const order_nums = equipmentOrdersFind[j].order_nums.split(",").map(num => Number(num));
 
       const equipment_no_list = [];
 
@@ -236,7 +246,66 @@ export class EquipmentOrderService {
         if (!equipment_no_list.includes(equipment_ids[k])) equipment_no_list.push(equipment_ids[k]);
       }
 
-      const equipments = []
+      const equipments = [];
+
+      // 操作物流信息
+      if (equipmentOrdersFind[j].status > 2) {
+        // 已发货的
+        const courierFind = await this.courierService.findOneByCourierNumber(equipmentOrdersFind[j].courier_number);
+        if (!courierFind) {
+          // 没有历史记录
+          const courier = new Courier();
+          courier.courier_number = equipmentOrdersFind[j].courier_number;
+          const courier_info = await this.courierService.getCourierInfo(equipmentOrdersFind[j].courier_number, equipmentOrdersFind[j].courier_company);
+          const courier_info_result = courier_info.data.result ? courier_info.data.result : {};
+          const courier_info_status = courier_info_result.deliverystatus ? Number(courier_info_result.deliverystatus) : 0;
+          courier.courier_content = JSON.stringify(courier_info_result);
+          courier.status = courier_info_status;
+          courier.recent_update_time = new Date();
+          await this.courierService.createCourier(courier);
+          Object.defineProperty(equipmentOrdersFind[j], "courier_info", {
+            value: courier,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          });
+        } else {
+          // 有历史记录
+          if (new Date().getTime() - new Date(courierFind.recent_update_time).getTime() > COURIER_CACHE_TIME && courierFind.status !== 3 && courierFind.status !== 6) {
+            // 数据大于半小时了, 该更新了
+            // 而且数据不是已签收或者退件签收
+            const courier_info = await this.courierService.getCourierInfo(equipmentOrdersFind[j].courier_number, equipmentOrdersFind[j].courier_company);
+            const courier_info_result = courier_info.data.result ? courier_info.data.result : {};
+            const courier_info_status = courier_info_result.deliverystatus ? Number(courier_info_result.deliverystatus) : 0;
+            courierFind.courier_content = JSON.stringify(courier_info_result);
+            courierFind.status = courier_info_status;
+            courierFind.recent_update_time = new Date();
+            await this.courierService.updateCourier(courierFind);
+            Object.defineProperty(equipmentOrdersFind[j], "courier_info", {
+              value: courierFind,
+              enumerable: true,
+              configurable: true,
+              writable: true
+            });
+          }else{
+            // 数据还在半小时以内, 直接赋值
+            Object.defineProperty(equipmentOrdersFind[j], "courier_info", {
+              value: courierFind,
+              enumerable: true,
+              configurable: true,
+              writable: true
+            });
+          }
+        }
+      }else{
+        // 未发货的
+        Object.defineProperty(equipmentOrdersFind[j], "courier_info", {
+          value: new Courier(),
+          enumerable: true,
+          configurable: true,
+          writable: true
+        });
+      }
 
       // 获取器材和对应型号
       for (let k = 0; k < equipment_no_list.length; k++) {
@@ -249,17 +318,17 @@ export class EquipmentOrderService {
         const model_no_price_list = [];
         const model_no_num_list = [];
         equipment_ids.forEach((equipment_id, index) => {
-          if (equipment_id === equipment_no_list[k]){
-            model_no_list.push(model_ids[index])
-            model_no_price_list.push(order_prices[index])
-            model_no_num_list.push(order_nums[index])
+          if (equipment_id === equipment_no_list[k]) {
+            model_no_list.push(model_ids[index]);
+            model_no_price_list.push(order_prices[index]);
+            model_no_num_list.push(order_nums[index]);
           }
-        })
+        });
         for (let l = 0; l < model_no_list.length; l++) {
           const modelFind = await this.equipmentModelService.findOneById(model_no_list[l]);
           const model_order = {
             ...modelFind,
-            add_num:  model_no_num_list[l],
+            add_num: model_no_num_list[l],
             order_price: model_no_price_list[l]
           };
           equipment_order.models.push(model_order);
@@ -267,12 +336,12 @@ export class EquipmentOrderService {
         equipments.push(equipment_order);
       }
 
-      Object.defineProperty(equipmentOrdersFind[j], 'equipment', {
+      Object.defineProperty(equipmentOrdersFind[j], "equipment", {
         value: equipments,
         enumerable: true,
         configurable: true,
         writable: true
-      })
+      });
     }
 
     return {
@@ -309,6 +378,7 @@ export class EquipmentOrderService {
       shipping_phone: true,
       shipping_name: true,
       courier_number: true,
+      courier_company: true,
       remark: true,
       status: true,
       created_at: true,
@@ -320,10 +390,69 @@ export class EquipmentOrderService {
         message: "订单号不存在"
       };
     }
-    const equipment_ids = equipmentOrderFind.equipment_ids.split(',')
-    const model_ids = equipmentOrderFind.model_ids.split(',')
-    const order_prices = equipmentOrderFind.order_prices.split(',')
-    const order_nums = equipmentOrderFind.order_nums.split(',').map(num => Number(num))
+
+    // 操作物流信息
+    if (equipmentOrderFind.status > 2) {
+      const courierFind = await this.courierService.findOneByCourierNumber(equipmentOrderFind.courier_number);
+      if (!courierFind) {
+        // 没有历史记录
+        const courier = new Courier();
+        courier.courier_number = equipmentOrderFind.courier_number;
+        const courier_info = await this.courierService.getCourierInfo(equipmentOrderFind.courier_number, equipmentOrderFind.courier_company);
+        const courier_info_result = courier_info.data.result ? courier_info.data.result : {};
+        const courier_info_status = courier_info_result.deliverystatus ? Number(courier_info_result.deliverystatus) : 0;
+        courier.courier_content = JSON.stringify(courier_info_result);
+        courier.status = courier_info_status;
+        courier.recent_update_time = new Date();
+        await this.courierService.createCourier(courier);
+        Object.defineProperty(equipmentOrderFind, "courier_info", {
+          value: courier,
+          enumerable: true,
+          configurable: true,
+          writable: true
+        });
+      } else {
+        // 有历史记录
+        if (new Date().getTime() - new Date(courierFind.recent_update_time).getTime() > COURIER_CACHE_TIME && courierFind.status !== 3 && courierFind.status !== 6) {
+          // 数据大于半小时了, 该更新了
+          // 而且数据不是已签收或者退件签收
+          const courier_info = await this.courierService.getCourierInfo(equipmentOrderFind.courier_number, equipmentOrderFind.courier_company);
+          const courier_info_result = courier_info.data.result ? courier_info.data.result : {};
+          const courier_info_status = courier_info_result.deliverystatus ? Number(courier_info_result.deliverystatus) : 0;
+          courierFind.courier_content = JSON.stringify(courier_info_result);
+          courierFind.status = courier_info_status;
+          courierFind.recent_update_time = new Date();
+          await this.courierService.updateCourier(courierFind);
+          Object.defineProperty(equipmentOrderFind, "courier_info", {
+            value: courierFind,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          });
+        }else{
+          // 数据还在半小时以内, 直接赋值
+          Object.defineProperty(equipmentOrderFind, "courier_info", {
+            value: courierFind,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          });
+        }
+      }
+    }else{
+      // 未发货的
+      Object.defineProperty(equipmentOrderFind, "courier_info", {
+        value: new Courier(),
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    }
+
+    const equipment_ids = equipmentOrderFind.equipment_ids.split(",");
+    const model_ids = equipmentOrderFind.model_ids.split(",");
+    const order_prices = equipmentOrderFind.order_prices.split(",");
+    const order_nums = equipmentOrderFind.order_nums.split(",").map(num => Number(num));
 
     const equipment_no_list = [];
 
@@ -331,7 +460,7 @@ export class EquipmentOrderService {
       if (!equipment_no_list.includes(equipment_ids[k])) equipment_no_list.push(equipment_ids[k]);
     }
 
-    const equipments = []
+    const equipments = [];
 
     // 获取器材和对应型号
     for (let k = 0; k < equipment_no_list.length; k++) {
@@ -344,17 +473,17 @@ export class EquipmentOrderService {
       const model_no_price_list = [];
       const model_no_num_list = [];
       equipment_ids.forEach((equipment_id, index) => {
-        if (equipment_id === equipment_no_list[k]){
-          model_no_list.push(model_ids[index])
-          model_no_price_list.push(order_prices[index])
-          model_no_num_list.push(order_nums[index])
+        if (equipment_id === equipment_no_list[k]) {
+          model_no_list.push(model_ids[index]);
+          model_no_price_list.push(order_prices[index]);
+          model_no_num_list.push(order_nums[index]);
         }
-      })
+      });
       for (let l = 0; l < model_no_list.length; l++) {
         const modelFind = await this.equipmentModelService.findOneById(model_no_list[l]);
         const model_order = {
           ...modelFind,
-          add_num:  model_no_num_list[l],
+          add_num: model_no_num_list[l],
           order_price: model_no_price_list[l]
         };
         equipment_order.models.push(model_order);
@@ -362,12 +491,12 @@ export class EquipmentOrderService {
       equipments.push(equipment_order);
     }
 
-    Object.defineProperty(equipmentOrderFind, 'equipment', {
+    Object.defineProperty(equipmentOrderFind, "equipment", {
       value: equipments,
       enumerable: true,
       configurable: true,
       writable: true
-    })
+    });
     return {
       code: HttpStatus.OK,
       message: "查询成功",
@@ -403,6 +532,7 @@ export class EquipmentOrderService {
       shipping_phone: true,
       shipping_name: true,
       courier_number: true,
+      courier_company: true,
       remark: true,
       status: true,
       created_at: true,
@@ -414,10 +544,69 @@ export class EquipmentOrderService {
         message: "订单号不存在"
       };
     }
-    const equipment_ids = equipmentOrderFind.equipment_ids.split(',')
-    const model_ids = equipmentOrderFind.model_ids.split(',')
-    const order_prices = equipmentOrderFind.order_prices.split(',')
-    const order_nums = equipmentOrderFind.order_nums.split(',').map(num => Number(num))
+
+    // 操作物流信息
+    if (equipmentOrderFind.status > 2) {
+      const courierFind = await this.courierService.findOneByCourierNumber(equipmentOrderFind.courier_number);
+      if (!courierFind) {
+        // 没有历史记录
+        const courier = new Courier();
+        courier.courier_number = equipmentOrderFind.courier_number;
+        const courier_info = await this.courierService.getCourierInfo(equipmentOrderFind.courier_number, equipmentOrderFind.courier_company);
+        const courier_info_result = courier_info.data.result ? courier_info.data.result : {};
+        const courier_info_status = courier_info_result.deliverystatus ? Number(courier_info_result.deliverystatus) : 0;
+        courier.courier_content = JSON.stringify(courier_info_result);
+        courier.status = courier_info_status;
+        courier.recent_update_time = new Date();
+        await this.courierService.createCourier(courier);
+        Object.defineProperty(equipmentOrderFind, "courier_info", {
+          value: courier,
+          enumerable: true,
+          configurable: true,
+          writable: true
+        });
+      } else {
+        // 有历史记录
+        if (new Date().getTime() - new Date(courierFind.recent_update_time).getTime() > COURIER_CACHE_TIME && courierFind.status !== 3 && courierFind.status !== 6) {
+          // 数据大于半小时了, 该更新了
+          // 而且数据不是已签收或者退件签收
+          const courier_info = await this.courierService.getCourierInfo(equipmentOrderFind.courier_number, equipmentOrderFind.courier_company);
+          const courier_info_result = courier_info.data.result ? courier_info.data.result : {};
+          const courier_info_status = courier_info_result.deliverystatus ? Number(courier_info_result.deliverystatus) : 0;
+          courierFind.courier_content = JSON.stringify(courier_info_result);
+          courierFind.status = courier_info_status;
+          courierFind.recent_update_time = new Date();
+          await this.courierService.updateCourier(courierFind);
+          Object.defineProperty(equipmentOrderFind, "courier_info", {
+            value: courierFind,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          });
+        }else{
+          // 数据还在半小时以内, 直接赋值
+          Object.defineProperty(equipmentOrderFind, "courier_info", {
+            value: courierFind,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          });
+        }
+      }
+    }else{
+      // 未发货的
+      Object.defineProperty(equipmentOrderFind, "courier_info", {
+        value: new Courier(),
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    }
+
+    const equipment_ids = equipmentOrderFind.equipment_ids.split(",");
+    const model_ids = equipmentOrderFind.model_ids.split(",");
+    const order_prices = equipmentOrderFind.order_prices.split(",");
+    const order_nums = equipmentOrderFind.order_nums.split(",").map(num => Number(num));
 
     const equipment_no_list = [];
 
@@ -425,7 +614,7 @@ export class EquipmentOrderService {
       if (!equipment_no_list.includes(equipment_ids[k])) equipment_no_list.push(equipment_ids[k]);
     }
 
-    const equipments = []
+    const equipments = [];
 
     // 获取器材和对应型号
     for (let k = 0; k < equipment_no_list.length; k++) {
@@ -438,17 +627,17 @@ export class EquipmentOrderService {
       const model_no_price_list = [];
       const model_no_num_list = [];
       equipment_ids.forEach((equipment_id, index) => {
-        if (equipment_id === equipment_no_list[k]){
-          model_no_list.push(model_ids[index])
-          model_no_price_list.push(order_prices[index])
-          model_no_num_list.push(order_nums[index])
+        if (equipment_id === equipment_no_list[k]) {
+          model_no_list.push(model_ids[index]);
+          model_no_price_list.push(order_prices[index]);
+          model_no_num_list.push(order_nums[index]);
         }
-      })
+      });
       for (let l = 0; l < model_no_list.length; l++) {
         const modelFind = await this.equipmentModelService.findOneById(model_no_list[l]);
         const model_order = {
           ...modelFind,
-          add_num:  model_no_num_list[l],
+          add_num: model_no_num_list[l],
           order_price: model_no_price_list[l]
         };
         equipment_order.models.push(model_order);
@@ -456,16 +645,110 @@ export class EquipmentOrderService {
       equipments.push(equipment_order);
     }
 
-    Object.defineProperty(equipmentOrderFind, 'equipment', {
+    Object.defineProperty(equipmentOrderFind, "equipment", {
       value: equipments,
       enumerable: true,
       configurable: true,
       writable: true
-    })
+    });
     return {
       code: HttpStatus.OK,
       message: "查询成功",
       data: equipmentOrderFind
+    };
+  }
+
+  /**
+   * 查询多个订单
+   * @param custom custom find options
+   * @param query custom find query
+   */
+  async findManyEquipmentOrders(custom: FindOptionsWhere<EquipmentOrder>, query: PaginationQuery): Promise<ResponsePaginationResult> {
+    const [equipmentOrdersFind, totalCount] = await this.findMany(custom, query, {
+      id: true,
+      user_id: true,
+      equipment_ids: true,
+      model_ids: true,
+      order_prices: true,
+      order_nums: true,
+      order_total_num: true,
+      order_total: true,
+      order_no: true,
+      order_time: true,
+      payment_no: true,
+      payment_type: true,
+      payment_time: true,
+      payment_num: true,
+      origin_address: true,
+      origin_name: true,
+      origin_phone: true,
+      shipping_address: true,
+      shipping_phone: true,
+      shipping_name: true,
+      courier_number: true,
+      courier_company: true,
+      remark: true,
+      status: true,
+      created_at: true,
+      updated_at: true
+    });
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: {
+        data: equipmentOrdersFind,
+        pageSize: query.pageSize,
+        pageNo: query.pageNo,
+        totalCount: totalCount,
+        totalPage: Math.ceil(totalCount / query.pageSize)
+      }
+    };
+  }
+
+  /**
+   * 发货
+   * @param equipmentOrder
+   */
+  public async beginOrderShipment(equipmentOrder: EquipmentOrder): Promise<ResponseResult> {
+    const equipmentOrderFind = await this.equipmentOrderRepo.findOne({ where: { id: equipmentOrder.id } });
+    if (!equipmentOrderFind) {
+      return {
+        code: HttpStatus.NOT_FOUND,
+        message: "订单不存在"
+      };
+    }
+    if (!equipmentOrder.origin_name || !equipmentOrder.origin_phone || !equipmentOrder.origin_address || !equipmentOrder.courier_number || !equipmentOrder.courier_company) {
+      return {
+        code: HttpStatus.BAD_REQUEST,
+        message: "发货信息异常"
+      };
+    }
+    const equipmentOrderUpdate = Object.assign(equipmentOrderFind, equipmentOrder);
+    equipmentOrderUpdate.status = 3;
+    await this.equipmentOrderRepo.update(equipmentOrderUpdate.id, equipmentOrderUpdate);
+    return {
+      code: HttpStatus.OK,
+      message: "发货成功"
+    };
+  }
+
+  /**
+   * 收货
+   * @param order_no
+   */
+  public async receiveOrderShipment(order_no: string): Promise<ResponseResult> {
+    const equipmentOrderFind = await this.equipmentOrderRepo.findOne({ where: { order_no } });
+    if (!equipmentOrderFind) {
+      return {
+        code: HttpStatus.NOT_FOUND,
+        message: "订单不存在"
+      };
+    }
+    equipmentOrderFind.status = 4;
+    await this.equipmentOrderRepo.save(equipmentOrderFind);
+    return {
+      code: HttpStatus.OK,
+      message: "收货成功"
     };
   }
 
@@ -506,6 +789,161 @@ export class EquipmentOrderService {
       order: { updated_at: "desc" },
       select
     });
+  }
+
+  /**
+   * 查询多个视频课
+   * @param custom custom find conditions
+   * @param query custom find query
+   * @param select select conditions
+   */
+  public async findMany(custom: FindOptionsWhere<EquipmentOrder>, query: PaginationQuery, select?: FindOptionsSelect<EquipmentOrder>): Promise<[EquipmentOrder[], number]> {
+    const take = query.pageSize || 10;
+    const page = query.pageNo || 1;
+    const skip = (page - 1) * take;
+    const customIn = { ...custom };
+    if (customIn.order_no) {
+      customIn.order_no = Like(`%${customIn.order_no}%`);
+    }
+    if (customIn.payment_no) {
+      customIn.payment_no = Like(`%${customIn.payment_no}%`);
+    }
+    if (customIn.courier_number) {
+      customIn.courier_number = Like(`%${customIn.courier_number}%`);
+    }
+    const equipmentOrdersResult = await getManager().createQueryBuilder(EquipmentOrder, "equipment_order")
+      .groupBy("equipment_order.id")
+      .select(Object.keys(select).map(key => `equipment_order.${key}`))
+      .where(customIn)
+      .orderBy("equipment_order.updated_at", "DESC")
+      .take(take)
+      .skip(skip)
+      .getManyAndCount();
+
+    // 找出所有的重复器材
+    for (let j = 0; j < equipmentOrdersResult[0].length; j++) {
+      const userFind = await this.userService.findOneById(equipmentOrdersResult[0][j].user_id);
+      Object.defineProperty(equipmentOrdersResult[0][j], "name", {
+        value: userFind.name,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+      Object.defineProperty(equipmentOrdersResult[0][j], "username", {
+        value: userFind.username,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+
+      // 操作物流信息
+      if (equipmentOrdersResult[0][j].status > 2) {
+        const courierFind = await this.courierService.findOneByCourierNumber(equipmentOrdersResult[0][j].courier_number);
+        if (!courierFind) {
+          // 没有历史记录
+          const courier = new Courier();
+          courier.courier_number = equipmentOrdersResult[0][j].courier_number;
+          const courier_info = await this.courierService.getCourierInfo(equipmentOrdersResult[0][j].courier_number, equipmentOrdersResult[0][j].courier_company);
+          const courier_info_result = courier_info.data.result ? courier_info.data.result : {};
+          const courier_info_status = courier_info_result.deliverystatus ? Number(courier_info_result.deliverystatus) : 0;
+          courier.courier_content = JSON.stringify(courier_info_result);
+          courier.status = courier_info_status;
+          courier.recent_update_time = new Date();
+          await this.courierService.createCourier(courier);
+          Object.defineProperty(equipmentOrdersResult[0][j], "courier_info", {
+            value: courier,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          });
+        } else {
+          // 有历史记录
+          if (new Date().getTime() - new Date(courierFind.recent_update_time).getTime() > COURIER_CACHE_TIME && courierFind.status !== 3 && courierFind.status !== 6) {
+            // 数据大于半小时了, 该更新了
+            // 而且数据不是已签收或者退件签收
+            const courier_info = await this.courierService.getCourierInfo(equipmentOrdersResult[0][j].courier_number, equipmentOrdersResult[0][j].courier_company);
+            const courier_info_result = courier_info.data.result ? courier_info.data.result : {};
+            const courier_info_status = courier_info_result.deliverystatus ? Number(courier_info_result.deliverystatus) : 0;
+            courierFind.courier_content = JSON.stringify(courier_info_result);
+            courierFind.status = courier_info_status;
+            courierFind.recent_update_time = new Date();
+            await this.courierService.updateCourier(courierFind);
+            Object.defineProperty(equipmentOrdersResult[0][j], "courier_info", {
+              value: courierFind,
+              enumerable: true,
+              configurable: true,
+              writable: true
+            });
+          }else{
+            // 数据还在半小时以内, 直接赋值
+            Object.defineProperty(equipmentOrdersResult[0][j], "courier_info", {
+              value: courierFind,
+              enumerable: true,
+              configurable: true,
+              writable: true
+            });
+          }
+        }
+      }else{
+        // 未发货的
+        Object.defineProperty(equipmentOrdersResult[0][j], "courier_info", {
+          value: new Courier(),
+          enumerable: true,
+          configurable: true,
+          writable: true
+        });
+      }
+
+      const equipment_ids = equipmentOrdersResult[0][j].equipment_ids.split(",");
+      const model_ids = equipmentOrdersResult[0][j].model_ids.split(",");
+      const order_prices = equipmentOrdersResult[0][j].order_prices.split(",");
+      const order_nums = equipmentOrdersResult[0][j].order_nums.split(",").map(num => Number(num));
+
+      const equipment_no_list = [];
+
+      for (let k = 0; k < equipment_ids.length; k++) {
+        if (!equipment_no_list.includes(equipment_ids[k])) equipment_no_list.push(equipment_ids[k]);
+      }
+
+      const equipments = [];
+
+      // 获取器材和对应型号
+      for (let k = 0; k < equipment_no_list.length; k++) {
+        const equipmentFind = await this.equipmentService.findOneById(equipment_no_list[k]);
+        const equipment_order = {
+          ...equipmentFind,
+          models: []
+        };
+        const model_no_list = [];
+        const model_no_price_list = [];
+        const model_no_num_list = [];
+        equipment_ids.forEach((equipment_id, index) => {
+          if (equipment_id === equipment_no_list[k]) {
+            model_no_list.push(model_ids[index]);
+            model_no_price_list.push(order_prices[index]);
+            model_no_num_list.push(order_nums[index]);
+          }
+        });
+        for (let l = 0; l < model_no_list.length; l++) {
+          const modelFind = await this.equipmentModelService.findOneById(model_no_list[l]);
+          const model_order = {
+            ...modelFind,
+            add_num: model_no_num_list[l],
+            order_price: model_no_price_list[l]
+          };
+          equipment_order.models.push(model_order);
+        }
+        equipments.push(equipment_order);
+      }
+
+      Object.defineProperty(equipmentOrdersResult[0][j], "equipment", {
+        value: equipments,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    }
+    return equipmentOrdersResult;
   }
 
 }

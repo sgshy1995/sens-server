@@ -25,6 +25,9 @@ import redisConfig from "./config/redis.config";
 // Mail配置
 import mailConfig from "./config/mail.config";
 
+// Courier配置
+import courierConfig from "./config/courier.config";
+
 // 引入 modules
 import { UserModule } from "./app/user/user.module";
 import { StatusFilter } from "./common/errors.filter";
@@ -48,6 +51,7 @@ import { CourseOrderModule } from "./app/course_order/course.order.module";
 import { TopUpOrderModule } from "./app/top_up_order/top.up.order.module";
 import { AddressModule } from "./app/address/address.module";
 import { EquipmentOrderModule } from "./app/equipment_order/equipment.order.module";
+import { CourierModule } from "./app/courier/courier.module";
 
 @Module({
   imports: [
@@ -56,7 +60,7 @@ import { EquipmentOrderModule } from "./app/equipment_order/equipment.order.modu
     ConfigModule.forRoot({
       envFilePath: isProd ? ".env.production" : ".env.development",
       isGlobal: true,
-      load: [databaseConfig, jwtConfig, redisConfig, mailConfig]
+      load: [databaseConfig, jwtConfig, redisConfig, mailConfig, courierConfig]
     }),
     // typeorm 连接数据库
     TypeOrmModule.forRoot({
@@ -86,7 +90,8 @@ import { EquipmentOrderModule } from "./app/equipment_order/equipment.order.modu
     CourseOrderModule,
     EquipmentOrderModule,
     TopUpOrderModule,
-    AddressModule
+    AddressModule,
+    CourierModule
   ],
   controllers: [AppController, UserController],
   providers: [
