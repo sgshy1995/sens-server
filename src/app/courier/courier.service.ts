@@ -148,7 +148,7 @@ export class CourierService {
    */
   public async getCourierInfo(courier_number: string, courier_company: string): Promise<ResponseResult> {
     return new Promise((resolve, reject) => {
-      const signer = require("../../static/signer");
+      const signer = require(path.resolve(__dirname, "../../static/signer"));
       const sig = new signer.Signer();
       sig.Key = courierConfig().AppKey;
       sig.Secret = courierConfig().AppSecret;

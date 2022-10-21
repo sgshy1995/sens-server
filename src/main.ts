@@ -18,7 +18,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, new ExpressAdapter(server));
   app.use("/public", serveStatic(path.join(__dirname, "../public"), {
     maxAge: "1d",
-    extensions: ["jpg", "jpeg", "png", "gif"]
+    extensions: ["jpg", "jpeg", "png", "gif", "json"]
   }));
   app.enableCors({
     origin: "*",
