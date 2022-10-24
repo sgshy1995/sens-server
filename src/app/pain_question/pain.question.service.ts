@@ -7,7 +7,7 @@ import { UserService } from "../user/user.service";
 import { PainReplyService } from "../pain_reply/pain.reply.service";
 import { PainCommentService } from "../pain_comment/pain.comment.service";
 
-const moment = require('moment')
+const moment = require("moment");
 
 @Injectable()
 export class PainQuestionService {
@@ -65,21 +65,21 @@ export class PainQuestionService {
         status: 1
       }
     });
-    if (!painQuestionFind){
+    if (!painQuestionFind) {
       return {
         code: HttpStatus.NOT_FOUND,
         message: "问题记录无效"
       };
     }
-    if (status === 1){
-      painQuestionFind.collect_num += 1
-      painQuestionFind.collect_user_ids = painQuestionFind.collect_user_ids ? painQuestionFind.collect_user_ids + ',' + user_id : user_id
-    }else if (status === 0){
-      painQuestionFind.collect_num -= 1
-      const collect_user_ids_list = painQuestionFind.collect_user_ids.split(',')
-      const find_index = collect_user_ids_list.findIndex(item=>item===user_id)
-      collect_user_ids_list.splice(find_index, 1)
-      painQuestionFind.collect_user_ids = collect_user_ids_list.join()
+    if (status === 1) {
+      painQuestionFind.collect_num += 1;
+      painQuestionFind.collect_user_ids = painQuestionFind.collect_user_ids ? painQuestionFind.collect_user_ids + "," + user_id : user_id;
+    } else if (status === 0) {
+      painQuestionFind.collect_num -= 1;
+      const collect_user_ids_list = painQuestionFind.collect_user_ids.split(",");
+      const find_index = collect_user_ids_list.findIndex(item => item === user_id);
+      collect_user_ids_list.splice(find_index, 1);
+      painQuestionFind.collect_user_ids = collect_user_ids_list.join();
     }
     await this.painQuestionRepo.update(painQuestionFind.id, painQuestionFind);
     return {
@@ -119,7 +119,7 @@ export class PainQuestionService {
         id
       }
     });
-    const painQuestionUpdate = Object.assign(painQuestionFind, painQuestion)
+    const painQuestionUpdate = Object.assign(painQuestionFind, painQuestion);
     await this.painQuestionRepo.update(id, painQuestionUpdate);
     return {
       code: HttpStatus.OK,
@@ -149,9 +149,9 @@ export class PainQuestionService {
       updated_at: true
     });
     for (let i = 0; i < painQuestionFind.length; i++) {
-      const user = await this.userService.findOneById(painQuestionFind[i].user_id)
-      painQuestionFind[i].question_time = moment(painQuestionFind[i].question_time, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DD HH:mm:ss')
-      Object.defineProperties(painQuestionFind[i],{
+      const user = await this.userService.findOneById(painQuestionFind[i].user_id);
+      painQuestionFind[i].question_time = moment(painQuestionFind[i].question_time, "YYYY-MM-DD HH:mm:ss").format("YYYY-MM-DD HH:mm:ss");
+      Object.defineProperties(painQuestionFind[i], {
         name: {
           value: user.name,
           configurable: true,
@@ -176,7 +176,7 @@ export class PainQuestionService {
           enumerable: true,
           writable: true
         }
-      })
+      });
     }
     return {
       code: HttpStatus.OK,
@@ -191,7 +191,7 @@ export class PainQuestionService {
    * @param keyword keyword option
    */
   async findManyPainQuestions(custom: FindOptionsWhere<PainQuestion>, keyword?: string): Promise<ResponseResult> {
-    const painQuestionFind = await this.findMany(custom, keyword,  {
+    const painQuestionFind = await this.findMany(custom, keyword, {
       id: true,
       user_id: true,
       pain_type: true,
@@ -209,9 +209,9 @@ export class PainQuestionService {
       updated_at: true
     });
     for (let i = 0; i < painQuestionFind.length; i++) {
-      const user = await this.userService.findOneById(painQuestionFind[i].user_id)
-      painQuestionFind[i].question_time = moment(painQuestionFind[i].question_time, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DD HH:mm:ss')
-      Object.defineProperties(painQuestionFind[i],{
+      const user = await this.userService.findOneById(painQuestionFind[i].user_id);
+      painQuestionFind[i].question_time = moment(painQuestionFind[i].question_time, "YYYY-MM-DD HH:mm:ss").format("YYYY-MM-DD HH:mm:ss");
+      Object.defineProperties(painQuestionFind[i], {
         name: {
           value: user.name,
           configurable: true,
@@ -236,7 +236,7 @@ export class PainQuestionService {
           enumerable: true,
           writable: true
         }
-      })
+      });
     }
     return {
       code: HttpStatus.OK,
@@ -268,7 +268,7 @@ export class PainQuestionService {
       created_at: true,
       updated_at: true
     });
-    if (painQuestionFind) painQuestionFind.question_time = moment(painQuestionFind.question_time, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DD HH:mm:ss')
+    if (painQuestionFind) painQuestionFind.question_time = moment(painQuestionFind.question_time, "YYYY-MM-DD HH:mm:ss").format("YYYY-MM-DD HH:mm:ss");
     return painQuestionFind ?
       {
         code: HttpStatus.OK,
@@ -296,14 +296,17 @@ export class PainQuestionService {
    * @param select select conditions
    */
   public async findMany(custom: FindOptionsWhere<PainQuestion>, keyword?: string, select?: FindOptionsSelect<PainQuestion>): Promise<PainQuestion[] | undefined> {
-    if (keyword){
-      custom.hasOwnProperty('description') && delete custom.description
-      custom.hasOwnProperty('pain_type') && delete custom.pain_type
+    if (keyword) {
+      custom.hasOwnProperty("description") && delete custom.description;
+      custom.hasOwnProperty("pain_type") && delete custom.pain_type;
     }
-    return await this.painQuestionRepo.createQueryBuilder('pain_question')
+    if (custom.collect_user_ids) {
+      custom.collect_user_ids = Like(`%${custom.collect_user_ids}%`);
+    }
+    return await this.painQuestionRepo.createQueryBuilder("pain_question")
       .where(custom)
-      .having('pain_question.description LIKE :description', { description: `%${keyword}%` })
-      .orHaving('pain_question.pain_type LIKE :pain_type', { pain_type: `%${keyword}%` })
+      .having("pain_question.description LIKE :description", { description: `%${keyword}%` })
+      .orHaving("pain_question.pain_type LIKE :pain_type", { pain_type: `%${keyword}%` })
       .select()
       .orderBy("pain_question.updated_at", "DESC")
       .getMany();
