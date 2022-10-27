@@ -27,8 +27,11 @@ export class User {
   @Column("int", { comment: "用户身份 1 医师 0 患者" })
   identity: number;
 
-  @Column("int", { comment: "用户认证 1 通过认证 0 未通过认证" })
+  @Column("int", { comment: "用户认证 2 已通过认证 1 认证审核中 0 未通过认证" })
   authenticate: number;
+
+  @Column("int", { comment: "是否有讲师权限 1 是 0 否" })
+  if_lecture_auth: number;
 
   @Column("varchar", { comment: "用户微信唯一标识", nullable: true })
   wx_unionid?: string;

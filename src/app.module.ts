@@ -52,6 +52,7 @@ import { TopUpOrderModule } from "./app/top_up_order/top.up.order.module";
 import { AddressModule } from "./app/address/address.module";
 import { EquipmentOrderModule } from "./app/equipment_order/equipment.order.module";
 import { CourierModule } from "./app/courier/courier.module";
+import { AuthenticateModule } from "./app/authenticate/authenticate.module";
 
 @Module({
   imports: [
@@ -91,7 +92,8 @@ import { CourierModule } from "./app/courier/courier.module";
     EquipmentOrderModule,
     TopUpOrderModule,
     AddressModule,
-    CourierModule
+    CourierModule,
+    AuthenticateModule
   ],
   controllers: [AppController, UserController],
   providers: [
@@ -124,7 +126,11 @@ export class AppModule {
         { path: "course_in_video/upload/video", method: RequestMethod.POST },
         { path: "equipment/upload/cover", method: RequestMethod.POST },
         { path: "equipment/upload/long_figure", method: RequestMethod.POST },
-        { path: "equipment_model/upload/multi_figure", method: RequestMethod.POST }
+        { path: "equipment_model/upload/multi_figure", method: RequestMethod.POST },
+        { path: "authenticate/upload/identity_card_front", method: RequestMethod.POST },
+        { path: "authenticate/upload/identity_card_back", method: RequestMethod.POST },
+        { path: "authenticate/upload/practicing_certificate", method: RequestMethod.POST },
+        { path: "authenticate/upload/employee_card", method: RequestMethod.POST }
       );
   }
 }

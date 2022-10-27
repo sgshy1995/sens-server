@@ -11,6 +11,7 @@ import { PainQuestionModule } from "../pain_question/pain.question.module";
 import { PainReplyModule } from "../pain_reply/pain.reply.module";
 import { PrescriptionModule } from "../prescription/prescription.module";
 import { CourseChartModule } from "../course_chart/course.chart.module";
+import { AuthenticateModule } from "../authenticate/authenticate.module";
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { CourseChartModule } from "../course_chart/course.chart.module";
     forwardRef(() => PainQuestionModule),
     forwardRef(() => PainReplyModule),
     forwardRef(() => PrescriptionModule),
-    forwardRef(() => CourseChartModule)
+    forwardRef(() => CourseChartModule),
+    forwardRef(() => AuthenticateModule)
   ],
   //controllers: [UserController],
   providers: [UserService],

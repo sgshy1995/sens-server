@@ -27,6 +27,11 @@ export class PathMiddleware implements NestMiddleware {
     createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/equipments/long_figure/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
     createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/equipments/cover/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
     createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/equipment_models/multi_figure/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
+    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/authenticates/identity_card/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
+    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/authenticates/identity_card/front/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
+    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/authenticates/identity_card/back/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
+    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/authenticates/practicing_certificate/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
+    createDirIfNotExist(path.join(process.env.UPLOAD_PATH,`/authenticates/employee_card/${moment(new Date(),'YYYY-MM-DD').utcOffset(8).format('YYYY-MM-DD')}`))
     next();
   }
 }
