@@ -53,6 +53,7 @@ import { AddressModule } from "./app/address/address.module";
 import { EquipmentOrderModule } from "./app/equipment_order/equipment.order.module";
 import { CourierModule } from "./app/courier/courier.module";
 import { AuthenticateModule } from "./app/authenticate/authenticate.module";
+import { LecturerTimeModule } from "./app/lecturer_time/lecturer.time.module";
 
 @Module({
   imports: [
@@ -93,7 +94,8 @@ import { AuthenticateModule } from "./app/authenticate/authenticate.module";
     TopUpOrderModule,
     AddressModule,
     CourierModule,
-    AuthenticateModule
+    AuthenticateModule,
+    LecturerTimeModule
   ],
   controllers: [AppController, UserController],
   providers: [

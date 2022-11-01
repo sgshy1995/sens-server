@@ -13,6 +13,7 @@ import { CourseChartService } from "../course_chart/course.chart.service";
 import { Notification } from "../../db/entities/Notification";
 import { UserInfo } from "../../db/entities/UserInfo";
 import { AuthenticateService } from "../authenticate/authenticate.service";
+import { LecturerTimeService } from "../lecturer_time/lecturer.time.service";
 import stringRandom from "string-random";
 import moment = require("moment");
 
@@ -35,7 +36,9 @@ export class UserService {
     @Inject(forwardRef(() => CourseChartService))
     private readonly courseChartService: CourseChartService,
     @Inject(forwardRef(() => AuthenticateService))
-    private readonly authenticateService: AuthenticateService
+    private readonly authenticateService: AuthenticateService,
+    @Inject(forwardRef(() => LecturerTimeService))
+    private readonly lecturerTimeService: LecturerTimeService
   ) {
   }
 

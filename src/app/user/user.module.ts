@@ -12,6 +12,7 @@ import { PainReplyModule } from "../pain_reply/pain.reply.module";
 import { PrescriptionModule } from "../prescription/prescription.module";
 import { CourseChartModule } from "../course_chart/course.chart.module";
 import { AuthenticateModule } from "../authenticate/authenticate.module";
+import { LecturerTimeModule } from "../lecturer_time/lecturer.time.module";
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { AuthenticateModule } from "../authenticate/authenticate.module";
     forwardRef(() => PainReplyModule),
     forwardRef(() => PrescriptionModule),
     forwardRef(() => CourseChartModule),
-    forwardRef(() => AuthenticateModule)
+    forwardRef(() => AuthenticateModule),
+    forwardRef(() => LecturerTimeModule)
   ],
   //controllers: [UserController],
   providers: [UserService],
