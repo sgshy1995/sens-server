@@ -5,6 +5,9 @@ import { LecturerTime } from "../../db/entities/LecturerTime";
 import { ResponseResult } from "../../types/result.interface";
 import { UserService } from "../user/user.service";
 import { LiveCourseService } from "../live_course/live.course.service";
+import { BookService } from "../book/book.service";
+import { PatientCourseService } from "../patient_course/patient.course.service";
+import { UserInfoService } from "../user_info/user.info.service";
 import moment = require("moment");
 
 @Injectable()
@@ -14,7 +17,13 @@ export class LecturerTimeService {
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
     @Inject(forwardRef(() => LiveCourseService))
-    private readonly liveCourseService: LiveCourseService
+    private readonly liveCourseService: LiveCourseService,
+    @Inject(forwardRef(() => BookService))
+    private readonly bookService: BookService,
+    @Inject(forwardRef(() => PatientCourseService))
+    private readonly patientCourseService: PatientCourseService,
+    @Inject(forwardRef(() => UserInfoService))
+    private readonly userInfoService: UserInfoService
   ) {
   }
 
@@ -64,6 +73,28 @@ export class LecturerTimeService {
    *
    * @param lecturerTime lecturerTime 实体对象
    */
+  async update(lecturerTime: LecturerTime): Promise<ResponseResult> {
+    const lecturerTimeFind = await this.lecturerTimeRepo.findOne({ where: { id: lecturerTime.id } });
+    if (!lecturerTimeFind) {
+      return {
+        code: HttpStatus.NOT_FOUND,
+        message: "时间记录不存在"
+      };
+    }
+    const lecturerTimeUpdate = Object.assign(lecturerTimeFind, lecturerTime);
+    await this.lecturerTimeRepo.update(lecturerTimeUpdate.id, lecturerTimeUpdate);
+    if (lecturerTimeUpdate.status)
+      return {
+        code: HttpStatus.OK,
+        message: "更新成功"
+      };
+  }
+
+  /**
+   * 更新
+   *
+   * @param lecturerTime lecturerTime 实体对象
+   */
   async updateLecturerTime(lecturerTime: LecturerTime): Promise<ResponseResult> {
     if (lecturerTime.start_time) {
       lecturerTime.start_time = new Date(lecturerTime.start_time);
@@ -72,12 +103,12 @@ export class LecturerTimeService {
       lecturerTime.end_time = new Date(lecturerTime.end_time);
     }
     const lecturerTimeFind = await this.lecturerTimeRepo.findOne({ where: { id: lecturerTime.id } });
-    if (!lecturerTimeFind){
+    if (!lecturerTimeFind) {
       return {
         code: HttpStatus.NOT_FOUND,
         message: "时间记录不存在"
       };
-    }else if (lecturerTimeFind.if_booked){
+    } else if (lecturerTimeFind.if_booked) {
       return {
         code: HttpStatus.BAD_REQUEST,
         message: "该时间段已被预约，无法修改"
@@ -113,7 +144,7 @@ export class LecturerTimeService {
       lecturerTime.end_time = new Date(lecturerTime.end_time);
     }
     const lecturerTimeFind = await this.lecturerTimeRepo.findOne({ where: { id: lecturerTime.id } });
-    if (!lecturerTimeFind){
+    if (!lecturerTimeFind) {
       return {
         code: HttpStatus.NOT_FOUND,
         message: "时间记录不存在"
@@ -137,11 +168,87 @@ export class LecturerTimeService {
   }
 
   /**
-   * 根据用户id查询多个时间段
+   * 根据用户id查询多个时间段 讲师使用
    * @param user_id user_id
    */
   async findManyLecturerTimesByUserId(user_id: string): Promise<ResponseResult> {
     const lecturerTimesFind = await this.findManyByUserId(user_id, {
+      id: true,
+      user_id: true,
+      start_time: true,
+      end_time: true,
+      if_booked: true,
+      book_id: true,
+      canceled_reason: true,
+      status: true,
+      created_at: true,
+      updated_at: true
+    });
+    for (let i = 0; i < lecturerTimesFind.length; i++) {
+      if (lecturerTimesFind[i].if_booked) {
+        const bookFind = await this.bookService.findOneById(lecturerTimesFind[i].book_id);
+        const patientCourseFind = await this.patientCourseService.findOneById(bookFind ? bookFind.patient_course_id : undefined);
+        const courseFind = await this.liveCourseService.findOneById(patientCourseFind ? patientCourseFind.course_id : undefined);
+        const userFind = await this.userService.findOneById(bookFind ? bookFind.user_id : undefined, {
+          id: true,
+          name: true,
+          gender: true,
+          avatar: true
+        });
+        const userInfoFind = await this.userInfoService.findOneByUserId(userFind ? userFind.id : undefined, {
+          age: true,
+          injury_history: true,
+          injury_recent: true,
+          discharge_abstract: true,
+          image_data: true
+        });
+        Object.defineProperties(lecturerTimesFind[i], {
+          book_info: {
+            value: bookFind,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          },
+          patient_course_info: {
+            value: patientCourseFind,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          },
+          course_info: {
+            value: courseFind,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          },
+          user_info: {
+            value: userFind,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          },
+          user_info_info: {
+            value: userInfoFind,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          }
+        });
+      }
+    }
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: lecturerTimesFind
+    };
+  }
+
+  /**
+   * 根据用户id查询多个 可预约时间段 患者使用
+   * @param book_id book_id 历史预约id
+   */
+  async findManyLecturerTimesCanBeBooked(book_id?: string): Promise<ResponseResult> {
+    const lecturerTimesFind = await this.findMany(book_id, {
       id: true,
       user_id: true,
       start_time: true,
@@ -159,7 +266,6 @@ export class LecturerTimeService {
       data: lecturerTimesFind
     };
   }
-
 
   /**
    * 根据 id 查询
@@ -179,15 +285,65 @@ export class LecturerTimeService {
       created_at: true,
       updated_at: true
     });
-    return lecturerTimeFind ?
-      {
-        code: HttpStatus.OK,
-        message: "查询成功",
-        data: lecturerTimeFind
-      } : {
+    if (!lecturerTimeFind) {
+      return {
         code: HttpStatus.NOT_FOUND,
         message: "记录不存在"
       };
+    }
+    const bookFind = await this.bookService.findOneById(lecturerTimeFind.book_id);
+    const patientCourseFind = await this.patientCourseService.findOneById(bookFind ? bookFind.patient_course_id : undefined);
+    const courseFind = await this.liveCourseService.findOneById(patientCourseFind ? patientCourseFind.course_id : undefined);
+    const userFind = await this.userService.findOneById(bookFind ? bookFind.user_id : undefined, {
+      id: true,
+      name: true,
+      gender: true,
+      avatar: true
+    });
+    const userInfoFind = await this.userInfoService.findOneByUserId(userFind ? userFind.id : undefined, {
+      age: true,
+      injury_history: true,
+      injury_recent: true,
+      discharge_abstract: true,
+      image_data: true
+    });
+    Object.defineProperties(lecturerTimeFind, {
+      book_info: {
+        value: bookFind,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      },
+      patient_course_info: {
+        value: patientCourseFind,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      },
+      course_info: {
+        value: courseFind,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      },
+      user_info: {
+        value: userFind,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      },
+      user_info_info: {
+        value: userInfoFind,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      }
+    });
+    return {
+      code: HttpStatus.OK,
+      message: "查询成功",
+      data: lecturerTimeFind
+    };
   }
 
   /**
@@ -206,7 +362,30 @@ export class LecturerTimeService {
     }
     if (lecturerTimeFind.if_booked) {
       // 已经被预约
-      lecturerTimeFind.status = 0;
+      lecturerTimeFind.status = 1;
+      const bookFind = await this.bookService.findOneById(lecturerTimeFind.book_id);
+      if (!bookFind) {
+        return {
+          code: HttpStatus.NOT_FOUND,
+          message: "预约记录不存在"
+        };
+      }
+      bookFind.status = 0
+      if (!bookFind.outer_canceled_reason) {
+        // 第一次无责取消
+        bookFind.outer_canceled_reason = '被讲师无责取消'
+      } else {
+        // 有责取消，送一次课
+        bookFind.outer_canceled_reason = '被讲师取消, 赠送一次课程'
+        const patientCourseFind = await this.patientCourseService.findOneById(bookFind ? bookFind.patient_course_id : "");
+        if (patientCourseFind) {
+          patientCourseFind.course_live_num += 1;
+          await this.patientCourseService.updatePatientCourse(patientCourseFind);
+        }
+      }
+      await this.bookService.update(bookFind);
+      lecturerTimeFind.if_booked = 0;
+      lecturerTimeFind.book_id = null;
       lecturerTimeFind.canceled_reason = canceled_reason;
       await this.lecturerTimeRepo.update(lecturerTimeFind.id, lecturerTimeFind);
     } else {
@@ -215,7 +394,7 @@ export class LecturerTimeService {
     }
     return {
       code: HttpStatus.OK,
-      message: "删除成功"
+      message: "预约已取消"
     };
   }
 
@@ -237,6 +416,32 @@ export class LecturerTimeService {
   public async findManyByUserId(user_id: string, select?: FindOptionsSelect<LecturerTime>): Promise<LecturerTime[]> {
     return await this.lecturerTimeRepo.find({
       where: { user_id },
+      order: { start_time: "desc" },
+      select
+    });
+  }
+
+  /**
+   * 根据用户查询多个时间段 可预约
+   * @param book_id book_id 历史预约id
+   * @param select select conditions
+   */
+  public async findMany(book_id?: string, select?: FindOptionsSelect<LecturerTime>): Promise<LecturerTime[]> {
+    let user_history_id = undefined;
+    if (book_id) {
+      // 如果存在预约记录，则此课程之后都是此讲师授课
+      const lecturerTimeHistory = await this.lecturerTimeRepo.findOne({
+        where: {
+          book_id,
+          status: 1
+        }
+      });
+      if (lecturerTimeHistory) {
+        user_history_id = lecturerTimeHistory.user_id;
+      }
+    }
+    return await this.lecturerTimeRepo.find({
+      where: { if_booked: 0, status: 1, user_id: user_history_id },
       order: { start_time: "desc" },
       select
     });

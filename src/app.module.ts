@@ -54,6 +54,8 @@ import { EquipmentOrderModule } from "./app/equipment_order/equipment.order.modu
 import { CourierModule } from "./app/courier/courier.module";
 import { AuthenticateModule } from "./app/authenticate/authenticate.module";
 import { LecturerTimeModule } from "./app/lecturer_time/lecturer.time.module";
+import { PatientCourseModule } from "./app/patient_course/patient.course.module";
+import { BookModule } from "./app/book/book.module";
 
 @Module({
   imports: [
@@ -95,7 +97,9 @@ import { LecturerTimeModule } from "./app/lecturer_time/lecturer.time.module";
     AddressModule,
     CourierModule,
     AuthenticateModule,
-    LecturerTimeModule
+    LecturerTimeModule,
+    PatientCourseModule,
+    BookModule
   ],
   controllers: [AppController, UserController],
   providers: [

@@ -13,6 +13,7 @@ import { PrescriptionModule } from "../prescription/prescription.module";
 import { CourseChartModule } from "../course_chart/course.chart.module";
 import { AuthenticateModule } from "../authenticate/authenticate.module";
 import { LecturerTimeModule } from "../lecturer_time/lecturer.time.module";
+import { PatientCourseModule } from "../patient_course/patient.course.module";
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { LecturerTimeModule } from "../lecturer_time/lecturer.time.module";
     forwardRef(() => PrescriptionModule),
     forwardRef(() => CourseChartModule),
     forwardRef(() => AuthenticateModule),
-    forwardRef(() => LecturerTimeModule)
+    forwardRef(() => LecturerTimeModule),
+    forwardRef(() => PatientCourseModule)
   ],
   //controllers: [UserController],
   providers: [UserService],

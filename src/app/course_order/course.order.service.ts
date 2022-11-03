@@ -8,8 +8,10 @@ import { ResponseResult } from "../../types/result.interface";
 import { VideoCourseService } from "../video_course/video.course.service";
 import { LiveCourseService } from "../live_course/live.course.service";
 import { UserInfoService } from "../user_info/user.info.service";
+import { PatientCourseService } from "../patient_course/patient.course.service";
 import moment = require("moment");
 import Chance = require("chance");
+import { PatientCourse } from "../../db/entities/PatientCourse";
 
 const chance = new Chance();
 
@@ -22,7 +24,9 @@ export class CourseOrderService {
     @Inject(forwardRef(() => LiveCourseService))
     private readonly liveCourseService: LiveCourseService,
     @Inject(forwardRef(() => UserInfoService))
-    private readonly userInfoService: UserInfoService
+    private readonly userInfoService: UserInfoService,
+    @Inject(forwardRef(() => PatientCourseService))
+    private readonly patientCourseService: PatientCourseService
   ) {
   }
 
@@ -129,6 +133,24 @@ export class CourseOrderService {
     // 增加积分
     userInfo.integral += Number(payment_num);
     await this.userInfoService.updateInfoByUserId(user_id, userInfo);
+    // 给患者课程增加
+    const liveCourses: LiveCourse[] = [];
+    courses.map((course) => {
+      if (course instanceof LiveCourse) liveCourses.push(course);
+    });
+    const patientCourses = [];
+    liveCourses.map(course => {
+      const patientCourse = new PatientCourse();
+      patientCourse.user_id = user_id;
+      patientCourse.course_live_num = course.live_num;
+      patientCourse.course_id = course.id;
+      patientCourse.learn_num = 0;
+      patientCourse.order_id = courseOrder.id;
+      patientCourse.status = 1;
+      patientCourse.validity_time = moment(new Date(courseOrder.payment_time)).add("years", 1).toDate();
+      patientCourses.push(patientCourse);
+    });
+    await this.patientCourseService.createManyPatientCourses(patientCourses);
     // 返回结果
     return responseBody;
   }

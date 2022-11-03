@@ -14,6 +14,7 @@ import { Notification } from "../../db/entities/Notification";
 import { UserInfo } from "../../db/entities/UserInfo";
 import { AuthenticateService } from "../authenticate/authenticate.service";
 import { LecturerTimeService } from "../lecturer_time/lecturer.time.service";
+import { PatientCourseService } from "../patient_course/patient.course.service";
 import stringRandom from "string-random";
 import moment = require("moment");
 
@@ -38,7 +39,9 @@ export class UserService {
     @Inject(forwardRef(() => AuthenticateService))
     private readonly authenticateService: AuthenticateService,
     @Inject(forwardRef(() => LecturerTimeService))
-    private readonly lecturerTimeService: LecturerTimeService
+    private readonly lecturerTimeService: LecturerTimeService,
+    @Inject(forwardRef(() => PatientCourseService))
+    private readonly patientCourseService: PatientCourseService
   ) {
   }
 
@@ -192,6 +195,7 @@ export class UserService {
       authenticate: true,
       identity: true,
       if_lecture_auth: true,
+      is_admin: true,
       status: true,
       recent_login_time: true,
       created_at: true,
@@ -228,6 +232,7 @@ export class UserService {
       authenticate: true,
       identity: true,
       if_lecture_auth: true,
+      is_admin: true,
       status: true,
       recent_login_time: true,
       created_at: true,
@@ -265,6 +270,7 @@ export class UserService {
       authenticate: true,
       identity: true,
       if_lecture_auth: true,
+      is_admin: true,
       status: true,
       recent_login_time: true,
       created_at: true,
