@@ -8,9 +8,17 @@ import { VideoCourseModule } from "../video_course/video.course.module";
 import { LiveCourseModule } from "../live_course/live.course.module";
 import { UserInfoModule } from "../user_info/user.info.module";
 import { PatientCourseModule } from "../patient_course/patient.course.module";
+import { MajorCourseModule } from "../major_course/major.course.module";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CourseOrder]), forwardRef(() => VideoCourseModule), forwardRef(() => LiveCourseModule), forwardRef(() => UserInfoModule), forwardRef(() => PatientCourseModule)],
+  imports: [
+    TypeOrmModule.forFeature([CourseOrder]),
+    forwardRef(() => VideoCourseModule),
+    forwardRef(() => LiveCourseModule),
+    forwardRef(() => UserInfoModule),
+    forwardRef(() => PatientCourseModule),
+    forwardRef(() => MajorCourseModule)
+  ],
   controllers: [CourseOrderController],
   providers: [CourseOrderService],
   exports: [CourseOrderService]

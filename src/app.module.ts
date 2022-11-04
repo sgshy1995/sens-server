@@ -56,6 +56,7 @@ import { AuthenticateModule } from "./app/authenticate/authenticate.module";
 import { LecturerTimeModule } from "./app/lecturer_time/lecturer.time.module";
 import { PatientCourseModule } from "./app/patient_course/patient.course.module";
 import { BookModule } from "./app/book/book.module";
+import { MajorCourseModule } from "./app/major_course/major.course.module";
 
 @Module({
   imports: [
@@ -99,7 +100,8 @@ import { BookModule } from "./app/book/book.module";
     AuthenticateModule,
     LecturerTimeModule,
     PatientCourseModule,
-    BookModule
+    BookModule,
+    MajorCourseModule
   ],
   controllers: [AppController, UserController],
   providers: [

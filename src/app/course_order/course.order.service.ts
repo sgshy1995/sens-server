@@ -9,9 +9,11 @@ import { VideoCourseService } from "../video_course/video.course.service";
 import { LiveCourseService } from "../live_course/live.course.service";
 import { UserInfoService } from "../user_info/user.info.service";
 import { PatientCourseService } from "../patient_course/patient.course.service";
+import { MajorCourseService } from "../major_course/major.course.service";
 import moment = require("moment");
 import Chance = require("chance");
 import { PatientCourse } from "../../db/entities/PatientCourse";
+import { MajorCourse } from "../../db/entities/MajorCourse";
 
 const chance = new Chance();
 
@@ -26,7 +28,9 @@ export class CourseOrderService {
     @Inject(forwardRef(() => UserInfoService))
     private readonly userInfoService: UserInfoService,
     @Inject(forwardRef(() => PatientCourseService))
-    private readonly patientCourseService: PatientCourseService
+    private readonly patientCourseService: PatientCourseService,
+    @Inject(forwardRef(() => MajorCourseService))
+    private readonly majorCourseService: MajorCourseService
   ) {
   }
 
@@ -138,7 +142,7 @@ export class CourseOrderService {
     courses.map((course) => {
       if (course instanceof LiveCourse) liveCourses.push(course);
     });
-    const patientCourses = [];
+    const patientCourses: PatientCourse[] = [];
     liveCourses.map(course => {
       const patientCourse = new PatientCourse();
       patientCourse.user_id = user_id;
@@ -151,6 +155,22 @@ export class CourseOrderService {
       patientCourses.push(patientCourse);
     });
     await this.patientCourseService.createManyPatientCourses(patientCourses);
+    // 增加专业康复课程
+    const videoCourses: VideoCourse[] = []
+    courses.map((course) => {
+      if (course instanceof VideoCourse) videoCourses.push(course);
+    });
+    const majorCourses: MajorCourse[] = [];
+    videoCourses.map(course => {
+      const majorCourse = new MajorCourse();
+      majorCourse.user_id = user_id;
+      majorCourse.course_id = course.id;
+      majorCourse.order_id = courseOrder.id;
+      majorCourse.status = 1;
+      majorCourse.validity_time = moment(new Date(courseOrder.payment_time)).add("years", 99).toDate();
+      majorCourses.push(majorCourse);
+    });
+    await this.majorCourseService.createManyMajorCourses(majorCourses);
     // 返回结果
     return responseBody;
   }
