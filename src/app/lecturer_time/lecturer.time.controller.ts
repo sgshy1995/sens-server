@@ -46,7 +46,8 @@ export class LecturerTimeController {
   @Get()
   async findManyLecturerTimesByUserId(@Res({ passthrough: true }) response: Response, @Req() request: RequestParams): Promise<Response | void | Record<string, any>> {
     const user_id = request.user.id
-    const res = await this.lecturerTimeService.findManyLecturerTimesByUserId(user_id);
+    const { query } = request
+    const res = await this.lecturerTimeService.findManyLecturerTimesByUserId(user_id, query.if_booked ? Number(query.if_booked) : undefined);
     response.status(res.code);
     return res;
   }

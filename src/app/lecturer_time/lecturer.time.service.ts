@@ -170,9 +170,10 @@ export class LecturerTimeService {
   /**
    * 根据用户id查询多个时间段 讲师使用
    * @param user_id user_id
+   * @param if_booked if_booked
    */
-  async findManyLecturerTimesByUserId(user_id: string): Promise<ResponseResult> {
-    const lecturerTimesFind = await this.findManyByUserId(user_id, {
+  async findManyLecturerTimesByUserId(user_id: string, if_booked?: number): Promise<ResponseResult> {
+    const lecturerTimesFind = await this.findManyByUserId(user_id, if_booked, {
       id: true,
       user_id: true,
       start_time: true,
@@ -193,7 +194,8 @@ export class LecturerTimeService {
           id: true,
           name: true,
           gender: true,
-          avatar: true
+          avatar: true,
+          phone: true
         });
         const userInfoFind = await this.userInfoService.findOneByUserId(userFind ? userFind.id : undefined, {
           age: true,
@@ -298,7 +300,8 @@ export class LecturerTimeService {
       id: true,
       name: true,
       gender: true,
-      avatar: true
+      avatar: true,
+      phone: true
     });
     const userInfoFind = await this.userInfoService.findOneByUserId(userFind ? userFind.id : undefined, {
       age: true,
@@ -411,11 +414,12 @@ export class LecturerTimeService {
   /**
    * 根据用户查询多个时间段
    * @param user_id user_id
+   * @param if_booked if_booked
    * @param select select conditions
    */
-  public async findManyByUserId(user_id: string, select?: FindOptionsSelect<LecturerTime>): Promise<LecturerTime[]> {
+  public async findManyByUserId(user_id: string, if_booked?: number, select?: FindOptionsSelect<LecturerTime>): Promise<LecturerTime[]> {
     return await this.lecturerTimeRepo.find({
-      where: { user_id },
+      where: { user_id, if_booked },
       order: { start_time: "desc" },
       select
     });
