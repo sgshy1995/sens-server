@@ -198,7 +198,9 @@ export class LecturerTimeService {
           phone: true
         });
         const userInfoFind = await this.userInfoService.findOneByUserId(userFind ? userFind.id : undefined, {
+          id: true,
           age: true,
+          user_id: true,
           injury_history: true,
           injury_recent: true,
           discharge_abstract: true,
@@ -304,7 +306,9 @@ export class LecturerTimeService {
       phone: true
     });
     const userInfoFind = await this.userInfoService.findOneByUserId(userFind ? userFind.id : undefined, {
+      id: true,
       age: true,
+      user_id: true,
       injury_history: true,
       injury_recent: true,
       discharge_abstract: true,
