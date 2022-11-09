@@ -4,6 +4,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { ConfigModule } from "@nestjs/config";
+import { ScheduleModule } from '@nestjs/schedule';
 import { PathMiddleware } from "./middleware/path.middleware";
 
 // 全局错误处理
@@ -27,6 +28,9 @@ import mailConfig from "./config/mail.config";
 
 // Courier配置
 import courierConfig from "./config/courier.config";
+
+// Tencent OS TRTC Media 配置
+import TRTCConfig from "./config/trtc.config";
 
 // 引入 modules
 import { UserModule } from "./app/user/user.module";
@@ -57,6 +61,10 @@ import { LecturerTimeModule } from "./app/lecturer_time/lecturer.time.module";
 import { PatientCourseModule } from "./app/patient_course/patient.course.module";
 import { BookModule } from "./app/book/book.module";
 import { MajorCourseModule } from "./app/major_course/major.course.module";
+import { RoomModule } from "./app/room/room.module";
+
+// 定时任务
+import { RoomTaskServiceService } from "./tasks/room.task.service";
 
 @Module({
   imports: [
@@ -65,7 +73,7 @@ import { MajorCourseModule } from "./app/major_course/major.course.module";
     ConfigModule.forRoot({
       envFilePath: isProd ? ".env.production" : ".env.development",
       isGlobal: true,
-      load: [databaseConfig, jwtConfig, redisConfig, mailConfig, courierConfig]
+      load: [databaseConfig, jwtConfig, redisConfig, mailConfig, courierConfig, TRTCConfig]
     }),
     // typeorm 连接数据库
     TypeOrmModule.forRoot({
@@ -75,6 +83,7 @@ import { MajorCourseModule } from "./app/major_course/major.course.module";
       autoLoadEntities: true,
       timezone: "Z"
     }),
+    ScheduleModule.forRoot(),
     // modules
     UserModule,
     AuthModule,
@@ -101,7 +110,8 @@ import { MajorCourseModule } from "./app/major_course/major.course.module";
     LecturerTimeModule,
     PatientCourseModule,
     BookModule,
-    MajorCourseModule
+    MajorCourseModule,
+    RoomModule
   ],
   controllers: [AppController, UserController],
   providers: [
@@ -113,7 +123,8 @@ import { MajorCourseModule } from "./app/major_course/major.course.module";
       provide: APP_FILTER,
       useClass: StatusFilter
     },
-    AppService
+    AppService,
+    RoomTaskServiceService
   ]
 })
 export class AppModule {

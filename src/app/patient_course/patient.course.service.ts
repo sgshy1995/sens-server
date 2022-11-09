@@ -7,6 +7,7 @@ import { UserService } from "../user/user.service";
 import { LiveCourseService } from "../live_course/live.course.service";
 import { CourseOrderService } from "../course_order/course.order.service";
 import { BookService } from "../book/book.service";
+import { RoomService } from "../room/room.service";
 
 @Injectable()
 export class PatientCourseService {
@@ -19,7 +20,9 @@ export class PatientCourseService {
     @Inject(forwardRef(() => CourseOrderService))
     private readonly courseOrderService: CourseOrderService,
     @Inject(forwardRef(() => BookService))
-    private readonly bookService: BookService
+    private readonly bookService: BookService,
+    @Inject(forwardRef(() => RoomService))
+    private readonly roomService: RoomService
   ) {
   }
 
@@ -122,6 +125,13 @@ export class PatientCourseService {
         configurable: true,
         writable: true
       });
+      const roomFind = bookFind ? await this.roomService.findOneSuccessByBookId(bookFind.id) : null;
+      Object.defineProperty(patientCoursesFind[i], "room_info", {
+        value: roomFind,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
     }
     return {
       code: HttpStatus.OK,
@@ -166,6 +176,13 @@ export class PatientCourseService {
     const bookFind = await this.bookService.findOneByPatientCourseId(patientCourseFind.id)
     Object.defineProperty(patientCourseFind, "book_info", {
       value: bookFind,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+    const roomFind = await this.roomService.findOneSuccessByBookId(bookFind ? bookFind.id : undefined);
+    Object.defineProperty(patientCourseFind, "room_info", {
+      value: roomFind,
       enumerable: true,
       configurable: true,
       writable: true

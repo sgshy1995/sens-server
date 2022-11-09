@@ -8,6 +8,7 @@ import { LiveCourseService } from "../live_course/live.course.service";
 import { BookService } from "../book/book.service";
 import { PatientCourseService } from "../patient_course/patient.course.service";
 import { UserInfoService } from "../user_info/user.info.service";
+import { RoomService } from "../room/room.service";
 import moment = require("moment");
 
 @Injectable()
@@ -23,9 +24,12 @@ export class LecturerTimeService {
     @Inject(forwardRef(() => PatientCourseService))
     private readonly patientCourseService: PatientCourseService,
     @Inject(forwardRef(() => UserInfoService))
-    private readonly userInfoService: UserInfoService
+    private readonly userInfoService: UserInfoService,
+    @Inject(forwardRef(() => RoomService))
+    private readonly roomService: RoomService
   ) {
   }
+
 
   /**
    * 创建时间
@@ -44,6 +48,12 @@ export class LecturerTimeService {
       return {
         code: HttpStatus.BAD_REQUEST,
         message: "用户没有讲师权限"
+      };
+    }
+    if (new Date(lecturerTime.start_time).getTime() - new Date().getTime() < 3600000){
+      return {
+        code: HttpStatus.BAD_REQUEST,
+        message: "至少开放一小时后的预约时间"
       };
     }
     const lecturerTimesFind = await this.findManyByUserId(lecturerTime.user_id);
@@ -206,6 +216,7 @@ export class LecturerTimeService {
           discharge_abstract: true,
           image_data: true
         });
+        const roomFind = await this.roomService.findOneSuccessByBookId(lecturerTimesFind[i].book_id);
         Object.defineProperties(lecturerTimesFind[i], {
           book_info: {
             value: bookFind,
@@ -233,6 +244,12 @@ export class LecturerTimeService {
           },
           user_info_info: {
             value: userInfoFind,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          },
+          room_info: {
+            value: roomFind,
             enumerable: true,
             configurable: true,
             writable: true
@@ -314,6 +331,7 @@ export class LecturerTimeService {
       discharge_abstract: true,
       image_data: true
     });
+    const roomFind = await this.roomService.findOneSuccessByBookId(lecturerTimeFind.book_id);
     Object.defineProperties(lecturerTimeFind, {
       book_info: {
         value: bookFind,
@@ -341,6 +359,12 @@ export class LecturerTimeService {
       },
       user_info_info: {
         value: userInfoFind,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      },
+      room_info: {
+        value: roomFind,
         enumerable: true,
         configurable: true,
         writable: true
@@ -377,13 +401,13 @@ export class LecturerTimeService {
           message: "预约记录不存在"
         };
       }
-      bookFind.status = 0
+      bookFind.status = 0;
       if (!bookFind.outer_canceled_reason) {
         // 第一次无责取消
-        bookFind.outer_canceled_reason = '被讲师无责取消'
+        bookFind.outer_canceled_reason = "被讲师无责取消";
       } else {
         // 有责取消，送一次课
-        bookFind.outer_canceled_reason = '被讲师取消, 赠送一次课程'
+        bookFind.outer_canceled_reason = "被讲师取消, 赠送一次课程";
         const patientCourseFind = await this.patientCourseService.findOneById(bookFind ? bookFind.patient_course_id : "");
         if (patientCourseFind) {
           patientCourseFind.course_live_num += 1;
@@ -423,7 +447,7 @@ export class LecturerTimeService {
    */
   public async findManyByUserId(user_id: string, if_booked?: number, select?: FindOptionsSelect<LecturerTime>): Promise<LecturerTime[]> {
     return await this.lecturerTimeRepo.find({
-      where: { user_id, if_booked },
+      where: { user_id, if_booked, status: 1 },
       order: { start_time: "desc" },
       select
     });

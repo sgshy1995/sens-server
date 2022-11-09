@@ -9,6 +9,7 @@ import { LiveCourseModule } from "../live_course/live.course.module";
 import { BookModule } from "../book/book.module";
 import { PatientCourseModule } from "../patient_course/patient.course.module";
 import { UserInfoModule } from "../user_info/user.info.module";
+import { RoomModule } from "../room/room.module";
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { UserInfoModule } from "../user_info/user.info.module";
     forwardRef(() => LiveCourseModule),
     forwardRef(() => BookModule),
     forwardRef(() => PatientCourseModule),
-    forwardRef(() => UserInfoModule)
+    forwardRef(() => UserInfoModule),
+    forwardRef(() => RoomModule)
   ],
   controllers: [LecturerTimeController],
   providers: [LecturerTimeService],
